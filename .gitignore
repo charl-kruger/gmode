@@ -1,0 +1,15 @@
+node_modules/
+.pnpm-store/
+.turbo/
+
+dist/
+coverage/
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+.DS_Store
+
+# Local source material used for the port; not part of the GMode repo.
+refrences/
+references/

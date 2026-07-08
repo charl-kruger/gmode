@@ -1,0 +1,46 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gmode-example-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-18",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "api.example.com",
+      "custom_domain": true,
+    },
+  ],
+  "services": [
+    {
+      "binding": "USERS_API",
+      "service": "gmode-example-users-api",
+    },
+    {
+      "binding": "BILLING_API",
+      "service": "gmode-example-billing-api",
+    },
+  ],
+  "ratelimits": [
+    {
+      "name": "API_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 1000,
+        "period": 60,
+      },
+    },
+  ],
+  "flagship": [
+    {
+      "binding": "FLAGS",
+      "app_id": "4fd9de6b-0054-40c5-b7bc-6fade105f4e7",
+    },
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
+  "secrets": {
+    "required": ["JWT_SECRET", "INTERNAL_SIGNING_SECRET"],
+  },
+}

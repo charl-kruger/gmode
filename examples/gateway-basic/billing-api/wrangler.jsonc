@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gmode-example-billing-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-18",
+  "workers_dev": false,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "services": [
+    {
+      "binding": "USERS_API",
+      "service": "gmode-example-users-api"
+    }
+  ],
+  "secrets": {
+    "required": ["INTERNAL_SIGNING_SECRET"]
+  }
+}

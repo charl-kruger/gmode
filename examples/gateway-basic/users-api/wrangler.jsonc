@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gmode-example-users-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-18",
+  "workers_dev": false,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
+  "flagship": [
+    {
+      "binding": "FLAGS",
+      "app_id": "4fd9de6b-0054-40c5-b7bc-6fade105f4e7",
+    },
+  ],
+  "secrets": {
+    "required": ["INTERNAL_SIGNING_SECRET"],
+  },
+}
