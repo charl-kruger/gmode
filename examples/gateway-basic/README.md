@@ -29,16 +29,17 @@ curl http://127.0.0.1:8787/openapi.json
 
 ## Deploy
 
-Set the secrets and deploy each Worker (services first, gateway last):
+Deploy each Worker with services first and the gateway last. The downstream
+services are private Workers reached through Service Bindings, so they do not
+need an internal signing secret:
 
 ```bash
-cd users-api && wrangler secret put INTERNAL_SIGNING_SECRET && wrangler deploy
-cd ../billing-api && wrangler secret put INTERNAL_SIGNING_SECRET && wrangler deploy
+cd users-api && wrangler deploy
+cd ../billing-api && wrangler deploy
 cd ../gateway
 wrangler secret put JWT_SECRET
-wrangler secret put INTERNAL_SIGNING_SECRET
 wrangler deploy
 ```
 
-`INTERNAL_SIGNING_SECRET` MUST be identical across the gateway and all
-services it forwards to.
+Keep `workers_dev: false` and do not add public routes to downstream services
+unless you also add your own public authentication layer.

@@ -17,7 +17,6 @@ const http = createService<Env>({ /* HTTP routes */ });
 const rpc = createRpcService<Env>({
   name: "Users API",
   trustGateway: {
-    signingSecret: (env) => env.INTERNAL_SIGNING_SECRET,
     audience: "users",
   },
 }).method("getUserById", {
@@ -42,7 +41,6 @@ import { GMODE_HEADERS } from "@gmode/core";
 import type { UsersApiRpc } from "../../users-api/src/index";
 
 type Env = {
-  INTERNAL_SIGNING_SECRET: string;
   USERS_API: UsersApiRpc;
 };
 

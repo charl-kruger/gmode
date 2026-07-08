@@ -26,13 +26,11 @@ type Env = {
   API_RATE_LIMITER: CloudflareRateLimitBinding;
   IDEMPOTENCY: KVNamespace;
   JWT_SECRET: string;
-  INTERNAL_SIGNING_SECRET: string;
 };
 
 const gateway = createGateway<Env>({
   name: "Example API",
   version: "1.0.0",
-  internal: { signingSecret: (env) => env.INTERNAL_SIGNING_SECRET },
   cache: {
     enabled: true,
     default: {
@@ -60,20 +58,21 @@ export default gateway;
 ```
 
 `gateway.service(...)` uses Cloudflare Service Bindings. The binding name must
-match the `services` entry in the gateway `wrangler.jsonc`.
+match the `services` entry in the gateway `wrangler.jsonc`. Downstream service
+Workers should stay private: set `workers_dev: false` and do not add routes or
+custom domains to them.
 
 ## Create A Service Worker
 
 ```ts
 import { createService, z } from "@gmode/service";
 
-type Env = { INTERNAL_SIGNING_SECRET: string };
+type Env = Record<string, never>;
 
 const service = createService<Env>({
   name: "Users API",
   version: "1.0.0",
   trustGateway: {
-    signingSecret: (env) => env.INTERNAL_SIGNING_SECRET,
     audience: "users",
   },
 });
@@ -157,6 +156,6 @@ service.post("/standard", {
 ## Next Steps
 
 - Configure bindings, secrets, rate limits, cache, and observability in [Cloudflare configuration](./cloudflare-configuration.md).
-- Add authentication and gateway trust in [Auth and security](./auth-and-security.md).
+- Add authentication and private service trust in [Auth and security](./auth-and-security.md).
 - Expose the gateway to MCP-compatible clients in [MCP server](./mcp.md).
 - Run the local example from [TESTING.md](../TESTING.md).

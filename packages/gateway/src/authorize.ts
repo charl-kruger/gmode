@@ -1,4 +1,4 @@
-import { ApiError, matchesAllScopes, type EnvResolver } from "@gmode/core";
+import { ApiError, matchesAllScopes } from "@gmode/core";
 import type {
   GatewayRequestContext,
   GatewayServiceEntry,
@@ -7,11 +7,11 @@ import type {
 
 /**
  * State key on `GatewayRequestContext.state` carrying a read-only handle to
- * the gateway's services list, resolved defaults, and internal signing
- * secret resolver. The gateway sets this at the start of every request so
+ * the gateway's services list and resolved defaults. The gateway sets this
+ * at the start of every request so
  * internal middleware (like `@gmode/mcp`) can index operations, apply the
  * same authorization rules as the normal route dispatcher, and dispatch
- * through `forwardToService` with the same signed context.
+ * through `forwardToService` with the same private context.
  *
  * Treat the returned data as read-only. Mutating it does not propagate.
  */
@@ -20,7 +20,6 @@ export const GATEWAY_INTERNALS_STATE_KEY = "gmode.gateway.internals";
 export type GatewayInternalsHandle<Env = unknown> = {
   services: ReadonlyArray<GatewayServiceEntry<Env>>;
   defaults: ResolvedGatewayDefaults;
-  signingSecret: EnvResolver<Env, string>;
 };
 
 /**

@@ -33,7 +33,6 @@ export type ServiceOptions<Env> = {
   version: string;
   basePath?: string;
   trustGateway?: {
-    signingSecret: EnvResolver<Env, string>;
     audience: string;
     required?: boolean;
   };
@@ -72,10 +71,10 @@ export type RouteHandlerContext<Env> = {
 export type FeatureFlagGate =
   | string
   | {
-      key: string;
-      default?: boolean;
-      behavior?: "404" | "403";
-    };
+    key: string;
+    default?: boolean;
+    behavior?: "404" | "403";
+  };
 
 export type RouteConfig<Env> = {
   operationId?: string;

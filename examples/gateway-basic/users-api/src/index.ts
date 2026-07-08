@@ -3,7 +3,6 @@ import { createRpcService, defineEntrypoint } from "@gmode/rpc";
 import type { FlagshipBinding } from "@gmode/core";
 
 type Env = {
-  INTERNAL_SIGNING_SECRET: string;
   FLAGS: FlagshipBinding;
 };
 
@@ -11,7 +10,6 @@ const service = createService<Env>({
   name: "Users API",
   version: "1.0.0",
   trustGateway: {
-    signingSecret: (env) => env.INTERNAL_SIGNING_SECRET,
     audience: "users",
   },
   flags: { binding: (env) => env.FLAGS },
@@ -96,7 +94,6 @@ service.get("/", {
 const rpc = createRpcService<Env>({
   name: "Users API",
   trustGateway: {
-    signingSecret: (env) => env.INTERNAL_SIGNING_SECRET,
     audience: "users",
   },
 }).method("getUserById", {

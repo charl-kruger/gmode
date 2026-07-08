@@ -14,13 +14,12 @@ import {
 import { mountMcp } from "./middleware";
 import { bearerTokenOAuthProvider } from "./oauth";
 
-const SIGNING = "internal-signing-secret";
 const JWT_SECRET = "jwt-secret";
 
 function execCtx(): ExecutionContext {
   return {
-    waitUntil() {},
-    passThroughOnException() {},
+    waitUntil() { },
+    passThroughOnException() { },
   } as ExecutionContext;
 }
 
@@ -47,11 +46,10 @@ async function makeJwt(claims: Record<string, unknown>): Promise<string> {
   return `${header}.${payload}.${sig}`;
 }
 
-type SvcEnv = { INTERNAL_SIGNING_SECRET: string };
+type SvcEnv = Record<string, never>;
 type GwEnv = {
   USERS_API: FetcherLike;
   BILLING_API: FetcherLike;
-  INTERNAL_SIGNING_SECRET: string;
   JWT_SECRET: string;
 };
 
@@ -60,7 +58,6 @@ function buildUsersService() {
     name: "Users API",
     version: "1.0.0",
     trustGateway: {
-      signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
       audience: "users",
     },
   });
@@ -92,7 +89,6 @@ function buildBillingService() {
     name: "Billing API",
     version: "1.0.0",
     trustGateway: {
-      signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
       audience: "billing",
     },
   });
@@ -113,7 +109,7 @@ function buildBillingService() {
       }),
     },
     handler: async ({ body, created }) => {
-      const input = body as { total: number; currency: string };
+      const input = body as { total: number; currency: string; };
       return created({
         id: "inv_test",
         total: input.total,
@@ -128,21 +124,19 @@ function buildGateway() {
   const users = buildUsersService();
   const billing = buildBillingService();
   const env: GwEnv = {
-    USERS_API: bindService(users, { INTERNAL_SIGNING_SECRET: SIGNING }),
-    BILLING_API: bindService(billing, {
-      INTERNAL_SIGNING_SECRET: SIGNING,
-    }),
-    INTERNAL_SIGNING_SECRET: SIGNING,
-    JWT_SECRET,
+    USERS_API: bindService(users, {}),
+    BILLING_API: bindService(billing, {}), JWT_SECRET,
   };
   const gateway = createGateway<GwEnv>({
     name: "Example API",
     version: "1.0.0",
-    internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
   });
   gateway.use(requestId());
   gateway.use(jsonErrors());
-  gateway.use(jwtAuth<GwEnv>({ secret: (e) => e.JWT_SECRET, required: false }));
+  gateway.use(jwtAuth<GwEnv>({
+    secret: (e) => e.JWT_SECRET,
+    required: false
+  }));
   gateway.use(
     mountMcp<GwEnv>({
       path: "/mcp",
@@ -170,17 +164,12 @@ function buildOAuthGateway() {
   const users = buildUsersService();
   const billing = buildBillingService();
   const env: GwEnv = {
-    USERS_API: bindService(users, { INTERNAL_SIGNING_SECRET: SIGNING }),
-    BILLING_API: bindService(billing, {
-      INTERNAL_SIGNING_SECRET: SIGNING,
-    }),
-    INTERNAL_SIGNING_SECRET: SIGNING,
-    JWT_SECRET,
+    USERS_API: bindService(users, {}),
+    BILLING_API: bindService(billing, {}), JWT_SECRET,
   };
   const gateway = createGateway<GwEnv>({
     name: "Example API",
     version: "1.0.0",
-    internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
   });
   gateway.use(requestId());
   gateway.use(jsonErrors());
@@ -237,7 +226,7 @@ async function postRpc(
   gateway: ReturnType<typeof createGateway<GwEnv>>,
   env: GwEnv,
   body: unknown,
-  init?: { headers?: Record<string, string> },
+  init?: { headers?: Record<string, string>; },
 ): Promise<unknown> {
   const res = await gateway.fetch(
     new Request("https://api.test/mcp", {
@@ -259,7 +248,7 @@ async function postRawRpc(
   gateway: ReturnType<typeof createGateway<GwEnv>>,
   env: GwEnv,
   body: unknown,
-  init?: { headers?: Record<string, string> },
+  init?: { headers?: Record<string, string>; },
 ): Promise<Response> {
   return gateway.fetch(
     new Request("https://api.test/mcp", {
@@ -310,7 +299,7 @@ describe("MCP protocol over POST /mcp", () => {
         capabilities: {},
         clientInfo: { name: "test", version: "0" },
       },
-    })) as { result: { serverInfo: { name: string }; protocolVersion: string } };
+    })) as { result: { serverInfo: { name: string; }; protocolVersion: string; }; };
     expect(reply.result.serverInfo.name).toBe("Example API MCP");
     expect(reply.result.protocolVersion).toBe("2024-11-05");
   });
@@ -329,9 +318,9 @@ describe("MCP protocol over POST /mcp", () => {
     })) as {
       result: {
         capabilities: {
-          tools?: { listChanged: boolean };
-          resources?: { listChanged: boolean };
-          prompts?: { listChanged: boolean };
+          tools?: { listChanged: boolean; };
+          resources?: { listChanged: boolean; };
+          prompts?: { listChanged: boolean; };
         };
       };
     };
@@ -346,7 +335,7 @@ describe("MCP protocol over POST /mcp", () => {
       jsonrpc: "2.0",
       id: 2,
       method: "tools/list",
-    })) as { result: { tools: { name: string }[] } };
+    })) as { result: { tools: { name: string; }[]; }; };
     const names = reply.result.tools.map((t) => t.name).sort();
     expect(names).toEqual(["discover", "invoke"]);
   });
@@ -358,9 +347,9 @@ describe("MCP protocol over POST /mcp", () => {
       id: 3,
       method: "tools/call",
       params: { name: "discover", arguments: {} },
-    })) as { result: { content: { text: string }[] } };
+    })) as { result: { content: { text: string; }[]; }; };
     const payload = JSON.parse(reply.result.content[0]!.text) as {
-      operations: { operationId: string }[];
+      operations: { operationId: string; }[];
     };
     const ids = payload.operations.map((o) => o.operationId).sort();
     expect(ids).toContain("getUser");
@@ -375,9 +364,9 @@ describe("MCP protocol over POST /mcp", () => {
       id: 4,
       method: "tools/call",
       params: { name: "discover", arguments: { query: "user" } },
-    })) as { result: { content: { text: string }[] } };
+    })) as { result: { content: { text: string; }[]; }; };
     const payload = JSON.parse(reply.result.content[0]!.text) as {
-      operations: { operationId: string }[];
+      operations: { operationId: string; }[];
     };
     const ids = payload.operations.map((o) => o.operationId).sort();
     expect(ids).toEqual(["getUser", "listUsers"]);
@@ -405,10 +394,10 @@ describe("MCP protocol over POST /mcp", () => {
         },
       },
       { headers: { authorization: `Bearer ${token}` } },
-    )) as { result: { content: { text: string }[]; isError?: boolean } };
+    )) as { result: { content: { text: string; }[]; isError?: boolean; }; };
     const payload = JSON.parse(reply.result.content[0]!.text) as {
       status: number;
-      body: { id: string; email: string };
+      body: { id: string; email: string; };
     };
     expect(payload.status).toBe(200);
     expect(payload.body.id).toBe("abc");
@@ -435,7 +424,7 @@ describe("MCP protocol over POST /mcp", () => {
         },
       },
       { headers: { authorization: `Bearer ${token}` } },
-    )) as { error?: { data?: { code: string } } };
+    )) as { error?: { data?: { code: string; }; }; };
     expect(reply.error?.data?.code).toBe("INSUFFICIENT_SCOPE");
   });
 
@@ -455,7 +444,7 @@ describe("MCP protocol over POST /mcp", () => {
         },
       },
       { headers: { authorization: `Bearer ${token}` } },
-    )) as { error?: { code: number; message: string } };
+    )) as { error?: { code: number; message: string; }; };
     expect(reply.error?.code).toBeDefined();
     expect(reply.error?.message).toMatch(/path parameter/);
   });
@@ -466,7 +455,7 @@ describe("MCP protocol over POST /mcp", () => {
       jsonrpc: "2.0",
       id: 8,
       method: "rituals/dance",
-    })) as { error?: { code: number; message: string } };
+    })) as { error?: { code: number; message: string; }; };
     expect(reply.error?.code).toBe(-32601);
     expect(reply.error?.message).toMatch(/Method not found/);
   });
@@ -477,7 +466,7 @@ describe("MCP protocol over POST /mcp", () => {
       jsonrpc: "2.0",
       id: 18,
       method: "resources/list",
-    })) as { result: { resources: { uri: string; mimeType: string }[] } };
+    })) as { result: { resources: { uri: string; mimeType: string; }[]; }; };
     expect(listReply.result.resources).toContainEqual({
       uri: "gmode://openapi.json",
       name: "Aggregated OpenAPI",
@@ -491,7 +480,7 @@ describe("MCP protocol over POST /mcp", () => {
       id: 19,
       method: "resources/read",
       params: { uri: "gmode://openapi.json" },
-    })) as { result: { contents: { text: string; mimeType: string }[] } };
+    })) as { result: { contents: { text: string; mimeType: string; }[]; }; };
     const spec = JSON.parse(readReply.result.contents[0]!.text) as {
       openapi: string;
       paths: Record<string, unknown>;
@@ -507,7 +496,7 @@ describe("MCP protocol over POST /mcp", () => {
       jsonrpc: "2.0",
       id: 20,
       method: "prompts/list",
-    })) as { result: { prompts: { name: string }[] } };
+    })) as { result: { prompts: { name: string; }[]; }; };
     expect(listReply.result.prompts.map((prompt) => prompt.name)).toEqual([
       "inspect-api",
       "invoke-operation",
@@ -523,7 +512,7 @@ describe("MCP protocol over POST /mcp", () => {
       },
     })) as {
       result: {
-        messages: { role: "user"; content: { type: "text"; text: string } }[];
+        messages: { role: "user"; content: { type: "text"; text: string; }; }[];
       };
     };
     expect(getReply.result.messages[0]!.role).toBe("user");
@@ -534,17 +523,12 @@ describe("MCP protocol over POST /mcp", () => {
     const users = buildUsersService();
     const billing = buildBillingService();
     const env: GwEnv = {
-      USERS_API: bindService(users, { INTERNAL_SIGNING_SECRET: SIGNING }),
-      BILLING_API: bindService(billing, {
-        INTERNAL_SIGNING_SECRET: SIGNING,
-      }),
-      INTERNAL_SIGNING_SECRET: SIGNING,
-      JWT_SECRET,
+      USERS_API: bindService(users, {}),
+      BILLING_API: bindService(billing, {}), JWT_SECRET,
     };
     const gateway = createGateway<GwEnv>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -556,7 +540,7 @@ describe("MCP protocol over POST /mcp", () => {
       jsonrpc: "2.0",
       id: 9,
       method: "tools/list",
-    })) as { result: { tools: { name: string }[] } };
+    })) as { result: { tools: { name: string; }[]; }; };
     const names = reply.result.tools.map((t) => t.name).sort();
     expect(names).toEqual(["createInvoice", "getUser", "listUsers"]);
   });
@@ -571,7 +555,7 @@ describe("MCP OAuth provider", () => {
       method: "tools/list",
     });
     expect(res.status).toBe(401);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("UNAUTHORIZED");
   });
 
@@ -588,7 +572,7 @@ describe("MCP OAuth provider", () => {
       { headers: { authorization: "Bearer wrong" } },
     );
     expect(res.status).toBe(401);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("INVALID_AUTH_TOKEN");
   });
 
@@ -605,7 +589,7 @@ describe("MCP OAuth provider", () => {
       { headers: { authorization: "Bearer missing-mcp-scope" } },
     );
     expect(res.status).toBe(403);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("INSUFFICIENT_SCOPE");
   });
 
@@ -627,10 +611,10 @@ describe("MCP OAuth provider", () => {
         },
       },
       { headers: { authorization: "Bearer valid-billing" } },
-    )) as { result: { content: { text: string }[]; isError?: boolean } };
+    )) as { result: { content: { text: string; }[]; isError?: boolean; }; };
     const payload = JSON.parse(reply.result.content[0]!.text) as {
       status: number;
-      body: { id: string; total: number; currency: string };
+      body: { id: string; total: number; currency: string; };
     };
     expect(payload.status).toBe(201);
     expect(payload.body).toEqual({

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   GMODE_HEADERS,
-  verifyGatewayContext,
+  decodeGatewayContext,
   type CloudflareRateLimitBinding,
   type FetcherLike,
 } from "@gmode/core";
@@ -11,8 +11,6 @@ import { jsonErrors } from "./middleware/json-errors";
 import { cloudflareRateLimit } from "./middleware/cloudflare-rate-limit";
 import { cors } from "./middleware/cors";
 import { idempotency } from "./middleware/idempotency";
-
-const SIGNING = "internal-signing-secret";
 
 type FetcherCall = {
   request: Request;
@@ -39,9 +37,9 @@ function mockFetcher(handler: (req: Request) => Response | Promise<Response>) {
 }
 
 function mockRateLimit(allow = true) {
-  const calls: { key: string }[] = [];
+  const calls: { key: string; }[] = [];
   const binding: CloudflareRateLimitBinding & {
-    calls: { key: string }[];
+    calls: { key: string; }[];
     setAllow(v: boolean): void;
   } = {
     calls,
@@ -58,8 +56,8 @@ function mockRateLimit(allow = true) {
 
 function execCtx(): ExecutionContext {
   return {
-    waitUntil() {},
-    passThroughOnException() {},
+    waitUntil() { },
+    passThroughOnException() { },
   } as ExecutionContext;
 }
 
@@ -68,7 +66,7 @@ type MockKv = {
   put(
     key: string,
     value: string,
-    options: { expirationTtl: number },
+    options: { expirationTtl: number; },
   ): Promise<void>;
   entries: Map<string, string>;
 };
@@ -90,7 +88,6 @@ type Env = {
   USERS_API: FetcherLike;
   RL: CloudflareRateLimitBinding;
   IDEMPOTENCY?: MockKv;
-  INTERNAL_SIGNING_SECRET: string;
 };
 
 describe("gateway", () => {
@@ -106,7 +103,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -120,7 +116,6 @@ describe("gateway", () => {
     const env: Env = {
       USERS_API: users,
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/users/123"),
@@ -128,7 +123,7 @@ describe("gateway", () => {
       execCtx(),
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { path: string };
+    const body = (await res.json()) as { path: string; };
     expect(body.path).toBe("/123");
     expect(users.calls).toHaveLength(1);
   });
@@ -138,7 +133,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
       cache: {
         enabled: true,
         default: {
@@ -158,7 +152,6 @@ describe("gateway", () => {
       {
         USERS_API: users,
         RL: mockRateLimit(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
@@ -175,7 +168,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
       cache: {
         enabled: true,
         default: {
@@ -199,7 +191,6 @@ describe("gateway", () => {
       {
         USERS_API: users,
         RL: mockRateLimit(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
@@ -215,7 +206,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
       cache: {
         enabled: true,
         default: {
@@ -236,7 +226,6 @@ describe("gateway", () => {
       {
         USERS_API: users,
         RL: mockRateLimit(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
@@ -249,7 +238,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
       cache: { enabled: true },
     });
     gateway.service("users", {
@@ -265,7 +253,6 @@ describe("gateway", () => {
       {
         USERS_API: users,
         RL: mockRateLimit(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
@@ -279,7 +266,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
       cache: {
         enabled: true,
         default: {
@@ -302,7 +288,6 @@ describe("gateway", () => {
       {
         USERS_API: users,
         RL: mockRateLimit(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
@@ -322,7 +307,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -335,7 +319,6 @@ describe("gateway", () => {
     const env: Env = {
       USERS_API: users,
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
 
     await gateway.fetch(
@@ -354,7 +337,7 @@ describe("gateway", () => {
     expect(req.headers.get("x-gmode-user-id")).toBeNull();
 
     const token = req.headers.get(GMODE_HEADERS.gatewayContext)!;
-    const verified = await verifyGatewayContext(token, SIGNING, {
+    const verified = decodeGatewayContext(token, {
       audience: "users",
     });
     expect(verified.iss).toBe("gmode-gateway");
@@ -364,7 +347,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "Cool API",
       version: "2.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     gateway.service("users", { mount: "/users", binding: "USERS_API" });
@@ -373,7 +355,6 @@ describe("gateway", () => {
     const env: Env = {
       USERS_API: mockFetcher(() => new Response("{}")),
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/"),
@@ -396,7 +377,6 @@ describe("gateway", () => {
       name: "Cool API",
       version: "2.0.0",
       docs: { scalar: "/reference", ui: "scalar" },
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     gateway.service("users", { mount: "/users", binding: "USERS_API" });
@@ -404,7 +384,6 @@ describe("gateway", () => {
     const env: Env = {
       USERS_API: mockFetcher(() => new Response("{}")),
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/"),
@@ -421,12 +400,10 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     const env: Env = {
       USERS_API: mockFetcher(() => new Response("{}")),
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/favicon.ico"),
@@ -441,13 +418,11 @@ describe("gateway", () => {
       name: "T",
       version: "1.0.0",
       docs: { index: null },
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     const env: Env = {
       USERS_API: mockFetcher(() => new Response("{}")),
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/"),
@@ -464,11 +439,10 @@ describe("gateway", () => {
       booleans: { "new-checkout": true, "billing-enabled": false },
     });
 
-    type FlagsEnv = Env & { FLAGS: typeof flagsBinding };
+    type FlagsEnv = Env & { FLAGS: typeof flagsBinding; };
     const gateway = createGateway<FlagsEnv>({
       name: "Cool API",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -494,7 +468,6 @@ describe("gateway", () => {
       USERS_API: mockFetcher(() => new Response("{}")),
       RL: mockRateLimit(),
       FLAGS: flagsBinding,
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/"),
@@ -517,7 +490,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     // Stand-in for `mountMcp` — same state-key contract.
@@ -533,7 +505,6 @@ describe("gateway", () => {
     const env: Env = {
       USERS_API: mockFetcher(() => new Response("{}")),
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/"),
@@ -562,12 +533,10 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     const env: Env = {
       USERS_API: mockFetcher(() => new Response("{}")),
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/"),
@@ -585,13 +554,11 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.service("root", { mount: "/", binding: "USERS_API" });
     const env: Env = {
       USERS_API: root,
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/"),
@@ -607,13 +574,11 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     const env: Env = {
       USERS_API: mockFetcher(() => new Response("x")),
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/nope"),
@@ -621,7 +586,7 @@ describe("gateway", () => {
       execCtx(),
     );
     expect(res.status).toBe(404);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("NOT_FOUND");
   });
 
@@ -630,7 +595,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.service("users", { mount: "/users", binding: "USERS_API" });
@@ -639,7 +603,6 @@ describe("gateway", () => {
       {
         USERS_API: users,
         RL: mockRateLimit(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       } as Env,
       execCtx(),
     );
@@ -652,7 +615,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -663,12 +625,11 @@ describe("gateway", () => {
       {
         USERS_API: users,
         RL: rl,
-        INTERNAL_SIGNING_SECRET: SIGNING,
       } as Env,
       execCtx(),
     );
     expect(res.status).toBe(429);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("TOO_MANY_REQUESTS");
     expect(rl.calls).toEqual([{ key: "k1" }]);
   });
@@ -679,7 +640,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -690,7 +650,6 @@ describe("gateway", () => {
       {
         USERS_API: users,
         RL: rl,
-        INTERNAL_SIGNING_SECRET: SIGNING,
       } as Env,
       execCtx(),
     );
@@ -702,7 +661,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(cors());
     gateway.service("users", { mount: "/users", binding: "USERS_API" });
@@ -714,7 +672,6 @@ describe("gateway", () => {
       {
         USERS_API: mockFetcher(() => new Response("{}")),
         RL: mockRateLimit(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       } as Env,
       execCtx(),
     );
@@ -726,7 +683,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -740,7 +696,6 @@ describe("gateway", () => {
       {
         USERS_API: users,
         RL: mockRateLimit(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       } as Env,
       execCtx(),
     );
@@ -757,7 +712,6 @@ describe("gateway", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     gateway.service("users", { mount: "/users", binding: "USERS_API" });
@@ -770,7 +724,6 @@ describe("gateway", () => {
       {
         USERS_API: users,
         RL: mockRateLimit(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       } as Env,
       execCtx(),
     );
@@ -788,7 +741,6 @@ describe("memoryRateLimit", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -804,7 +756,6 @@ describe("memoryRateLimit", () => {
     const env = {
       USERS_API: users,
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     } as Env;
     const r1 = await gateway.fetch(
       new Request("https://api.test/users/1"),
@@ -833,7 +784,6 @@ describe("idempotency", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     gateway.use(
@@ -851,7 +801,6 @@ describe("idempotency", () => {
         USERS_API: users,
         RL: mockRateLimit(),
         IDEMPOTENCY: mockKv(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
@@ -875,7 +824,6 @@ describe("idempotency", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     gateway.use(
@@ -890,7 +838,6 @@ describe("idempotency", () => {
       USERS_API: users,
       RL: mockRateLimit(),
       IDEMPOTENCY: kv,
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const init: RequestInit = {
       method: "POST",
@@ -927,7 +874,6 @@ describe("idempotency", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     gateway.use(
@@ -942,7 +888,6 @@ describe("idempotency", () => {
       USERS_API: users,
       RL: mockRateLimit(),
       IDEMPOTENCY: mockKv(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const headers = {
       "content-type": "application/json",
@@ -980,7 +925,6 @@ describe("idempotency", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     gateway.use(
@@ -998,7 +942,6 @@ describe("idempotency", () => {
         USERS_API: users,
         RL: mockRateLimit(),
         IDEMPOTENCY: mockKv(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
@@ -1012,7 +955,6 @@ describe("idempotency", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     gateway.use(
@@ -1027,7 +969,6 @@ describe("idempotency", () => {
       USERS_API: users,
       RL: mockRateLimit(),
       IDEMPOTENCY: mockKv(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const init: RequestInit = {
       method: "POST",
@@ -1061,7 +1002,6 @@ describe("idempotency", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway
       .apiVersion({ name: "v2", prefix: "/v2" })
@@ -1076,13 +1016,12 @@ describe("idempotency", () => {
       {
         USERS_API: users,
         RL: mockRateLimit(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { path: string };
+    const body = (await res.json()) as { path: string; };
     expect(body.path).toBe("/123");
   });
 
@@ -1091,7 +1030,6 @@ describe("idempotency", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway
       .apiVersion({
@@ -1114,7 +1052,6 @@ describe("idempotency", () => {
       {
         USERS_API: users,
         RL: mockRateLimit(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
@@ -1150,7 +1087,6 @@ describe("idempotency", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway
       .apiVersion({
@@ -1172,7 +1108,6 @@ describe("idempotency", () => {
       {
         USERS_API: users,
         RL: mockRateLimit(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
@@ -1210,7 +1145,6 @@ describe("requestLogger", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(requestLogger());
@@ -1227,7 +1161,6 @@ describe("requestLogger", () => {
         {
           USERS_API: users,
           RL: mockRateLimit(),
-          INTERNAL_SIGNING_SECRET: SIGNING,
         } as Env,
         execCtx(),
       );

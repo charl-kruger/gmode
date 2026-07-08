@@ -38,7 +38,6 @@ export type ServiceRpcFlagsOptions<Env> = {
 export type RpcServiceOptions<Env> = {
   name: string;
   trustGateway?: {
-    signingSecret: EnvResolver<Env, string>;
     audience: string;
     required?: boolean;
   };
@@ -48,9 +47,9 @@ export type RpcServiceOptions<Env> = {
 export type RpcFeatureFlagGate =
   | string
   | {
-      key: string;
-      default?: boolean;
-    };
+    key: string;
+    default?: boolean;
+  };
 
 export type RpcMethodConfig<Env, In, Out> = {
   description?: string;

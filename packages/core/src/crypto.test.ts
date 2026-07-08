@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  signGatewayContext,
-  verifyGatewayContext,
+  decodeGatewayContext,
+  encodeGatewayContext,
 } from "./crypto";
 import type { GatewayContext } from "./types";
 import { ApiError } from "./errors";
-
-const secret = "test-secret";
 
 function makeCtx(overrides: Partial<GatewayContext> = {}): GatewayContext {
   const now = Math.floor(Date.now() / 1000);
@@ -23,41 +21,37 @@ function makeCtx(overrides: Partial<GatewayContext> = {}): GatewayContext {
   };
 }
 
-describe("gateway context signing", () => {
-  it("signs and verifies a valid context", async () => {
-    const token = await signGatewayContext(makeCtx(), secret);
-    const verified = await verifyGatewayContext(token, secret, {
+describe("gateway context encoding", () => {
+  it("encodes and decodes a valid context", () => {
+    const token = encodeGatewayContext(makeCtx());
+    const verified = decodeGatewayContext(token, {
       audience: "users",
     });
     expect(verified.requestId).toBe("req_1");
     expect(verified.scopes).toEqual(["users:read"]);
   });
 
-  it("rejects bad signatures", async () => {
-    const token = await signGatewayContext(makeCtx(), secret);
-    await expect(
-      verifyGatewayContext(token, "wrong-secret", { audience: "users" }),
-    ).rejects.toBeInstanceOf(ApiError);
+  it("rejects wrong audience", () => {
+    const token = encodeGatewayContext(makeCtx());
+    expect(() =>
+      decodeGatewayContext(token, { audience: "billing" }),
+    ).toThrowError(ApiError);
+    expect(() =>
+      decodeGatewayContext(token, { audience: "billing" }),
+    ).toThrowError(/audience/);
   });
 
-  it("rejects wrong audience", async () => {
-    const token = await signGatewayContext(makeCtx(), secret);
-    await expect(
-      verifyGatewayContext(token, secret, { audience: "billing" }),
-    ).rejects.toMatchObject({ code: "INVALID_GATEWAY_CONTEXT_AUDIENCE" });
-  });
-
-  it("rejects expired context", async () => {
+  it("rejects expired context", () => {
     const expired = makeCtx({ expiresAt: Math.floor(Date.now() / 1000) - 120 });
-    const token = await signGatewayContext(expired, secret);
-    await expect(
-      verifyGatewayContext(token, secret, { audience: "users" }),
-    ).rejects.toMatchObject({ code: "EXPIRED_GATEWAY_CONTEXT" });
+    const token = encodeGatewayContext(expired);
+    expect(() =>
+      decodeGatewayContext(token, { audience: "users" }),
+    ).toThrowError(/expired/);
   });
 
-  it("rejects tokens with the wrong shape", async () => {
-    await expect(
-      verifyGatewayContext("not-a-token", secret, { audience: "users" }),
-    ).rejects.toMatchObject({ code: "INVALID_GATEWAY_CONTEXT" });
+  it("rejects tokens with the wrong shape", () => {
+    expect(() =>
+      decodeGatewayContext("not-a-token", { audience: "users" }),
+    ).toThrowError(ApiError);
   });
 });

@@ -12,18 +12,18 @@ import { jwtAuth } from "./middleware/auth";
 import { mtls } from "./middleware/mtls";
 import { sessionHeader } from "./middleware/session-header";
 
-const SIGNING = "internal-signing-secret";
+const SESSION_HEADER_SECRET = "session-header-secret";
 
 function execCtx(): ExecutionContext {
   return {
-    waitUntil() {},
-    passThroughOnException() {},
+    waitUntil() { },
+    passThroughOnException() { },
   } as ExecutionContext;
 }
 
 function mockFetcher(handler: (req: Request) => Response | Promise<Response>) {
   const calls: Request[] = [];
-  const fetcher: FetcherLike & { calls: Request[] } = {
+  const fetcher: FetcherLike & { calls: Request[]; } = {
     calls,
     async fetch(req) {
       calls.push(req);
@@ -61,7 +61,6 @@ function reqWithCert(
 
 type Env = {
   USERS_API: FetcherLike;
-  INTERNAL_SIGNING_SECRET: string;
   JWT_SECRET: string;
 };
 
@@ -70,7 +69,6 @@ describe("mtls middleware", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: () => SIGNING },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -81,13 +79,12 @@ describe("mtls middleware", () => {
       reqWithCert("https://api.test/users/1", undefined),
       {
         USERS_API: mockFetcher(() => new Response("{}")),
-        INTERNAL_SIGNING_SECRET: SIGNING,
         JWT_SECRET: "x",
       },
       execCtx(),
     );
     expect(res.status).toBe(401);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("MTLS_REQUIRED");
   });
 
@@ -95,7 +92,6 @@ describe("mtls middleware", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: () => SIGNING },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -109,13 +105,12 @@ describe("mtls middleware", () => {
       }),
       {
         USERS_API: mockFetcher(() => new Response("{}")),
-        INTERNAL_SIGNING_SECRET: SIGNING,
         JWT_SECRET: "x",
       },
       execCtx(),
     );
     expect(res.status).toBe(403);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("MTLS_INVALID");
   });
 
@@ -124,7 +119,6 @@ describe("mtls middleware", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: () => SIGNING },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -140,7 +134,6 @@ describe("mtls middleware", () => {
       }),
       {
         USERS_API: users,
-        INTERNAL_SIGNING_SECRET: SIGNING,
         JWT_SECRET: "x",
       },
       execCtx(),
@@ -156,7 +149,6 @@ describe("sessionHeader middleware", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: () => SIGNING },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -177,7 +169,6 @@ describe("sessionHeader middleware", () => {
       new Request("https://api.test/users/1"),
       {
         USERS_API: users,
-        INTERNAL_SIGNING_SECRET: SIGNING,
         JWT_SECRET: "x",
       },
       execCtx(),
@@ -186,11 +177,11 @@ describe("sessionHeader middleware", () => {
   });
 
   it("hashes the key when a secret is provided", async () => {
+    type EnvWithSessionSecret = Env & { SESSION_HEADER_SECRET: string; };
     const users = mockFetcher(() => new Response("{}"));
-    const gateway = createGateway<Env>({
+    const gateway = createGateway<EnvWithSessionSecret>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: () => SIGNING },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -204,7 +195,9 @@ describe("sessionHeader middleware", () => {
       return next();
     });
     gateway.use(
-      sessionHeader<Env>({ secret: (e) => e.INTERNAL_SIGNING_SECRET }),
+      sessionHeader<EnvWithSessionSecret>({
+        secret: (e) => e.SESSION_HEADER_SECRET,
+      }),
     );
     gateway.service("users", { mount: "/users", binding: "USERS_API" });
 
@@ -212,8 +205,8 @@ describe("sessionHeader middleware", () => {
       new Request("https://api.test/users/1"),
       {
         USERS_API: users,
-        INTERNAL_SIGNING_SECRET: SIGNING,
         JWT_SECRET: "x",
+        SESSION_HEADER_SECRET,
       },
       execCtx(),
     );
@@ -229,7 +222,6 @@ describe("jwtAuth assumeShieldVerified", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: () => SIGNING },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -256,7 +248,6 @@ describe("jwtAuth assumeShieldVerified", () => {
       }),
       {
         USERS_API: users,
-        INTERNAL_SIGNING_SECRET: SIGNING,
         JWT_SECRET: "x",
       },
       execCtx(),
@@ -271,7 +262,6 @@ describe("jwtAuth assumeShieldVerified", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: () => SIGNING },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -302,7 +292,6 @@ describe("jwtAuth assumeShieldVerified", () => {
       }),
       {
         USERS_API: users,
-        INTERNAL_SIGNING_SECRET: SIGNING,
         JWT_SECRET: "x",
       },
       execCtx(),
@@ -315,12 +304,11 @@ describe("jwtAuth assumeShieldVerified", () => {
 
 describe("/openapi.json?profile=shield", () => {
   it("returns a 3.0.3 spec with the warning count header", async () => {
-    type SvcEnv = { INTERNAL_SIGNING_SECRET: string };
+    type SvcEnv = Record<string, never>;
     const svc = createService<SvcEnv>({
       name: "Users API",
       version: "1.0.0",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     });
@@ -330,17 +318,15 @@ describe("/openapi.json?profile=shield", () => {
       params: z.object({ id: z.union([z.string(), z.number()]) }),
       responses: { 200: z.object({ id: z.string() }) },
       handler: async ({ params }) => ({
-        id: String((params as { id: string | number }).id),
+        id: String((params as { id: string | number; }).id),
       }),
     });
 
     const gateway = createGateway<{
       USERS_API: FetcherLike;
-      INTERNAL_SIGNING_SECRET: string;
     }>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.service("users", {
       mount: "/users",
@@ -349,8 +335,7 @@ describe("/openapi.json?profile=shield", () => {
     });
 
     const env = {
-      USERS_API: bindService(svc, { INTERNAL_SIGNING_SECRET: SIGNING }),
-      INTERNAL_SIGNING_SECRET: SIGNING,
+      USERS_API: bindService(svc, {}),
     };
 
     const res = await gateway.fetch(
@@ -360,7 +345,7 @@ describe("/openapi.json?profile=shield", () => {
     );
     expect(res.status).toBe(200);
     expect(res.headers.get("x-gmode-shield-warnings")).toBeTruthy();
-    const spec = (await res.json()) as { openapi: string };
+    const spec = (await res.json()) as { openapi: string; };
     expect(spec.openapi).toBe("3.0.3");
   });
 });

@@ -46,7 +46,7 @@ export type GatewayIndexFlagsInfo = {
 export type GatewayIndexMcpInfo = {
   path: string;
   mode: "catalog" | "tools";
-  serverInfo: { name: string; version: string };
+  serverInfo: { name: string; version: string; };
   /** Full origin (scheme + host + port) of the gateway, used to render copy-paste snippets. */
   origin?: string;
 };
@@ -87,12 +87,10 @@ export function gatewayIndexHtml<Env>(input: {
     .sort((a, b) => a.config.mount.localeCompare(b.config.mount))
     .map(
       (s) =>
-        `<li><span class="mount">${escape(s.config.mount)}</span> <span class="svc">${escape(s.name)}${
-          s.config.auth ? " · auth required" : ""
-        }${
-          s.config.scopes && s.config.scopes.length > 0
-            ? ` · scopes: ${s.config.scopes.map(escape).join(", ")}`
-            : ""
+        `<li><span class="mount">${escape(s.config.mount)}</span> <span class="svc">${escape(s.name)}${s.config.auth ? " · auth required" : ""
+        }${s.config.scopes && s.config.scopes.length > 0
+          ? ` · scopes: ${s.config.scopes.map(escape).join(", ")}`
+          : ""
         }</span></li>`,
     )
     .join("\n      ");
@@ -107,8 +105,7 @@ export function gatewayIndexHtml<Env>(input: {
   const flagsSection = flags
     ? `
   <h2>Feature flags${badgeLabel ? ` <span class="${badgeClass}">${badgeLabel}</span>` : ""}</h2>
-  ${
-    flags.bindingMissing
+  ${flags.bindingMissing
       ? `<div class="card warn">
     <div class="card-h">Binding "${escape(flags.bindingName ?? "FLAGS")}" not bound</div>
     <div class="hint">
@@ -120,9 +117,8 @@ export function gatewayIndexHtml<Env>(input: {
     </div>
   </div>`
       : ""
-  }
-  ${
-    !flags.bindingMissing && flags.evaluationContext && Object.keys(flags.evaluationContext).length > 0
+    }
+  ${!flags.bindingMissing && flags.evaluationContext && Object.keys(flags.evaluationContext).length > 0
       ? `<div class="card">
     <div class="card-h">Evaluation context</div>
     <div class="hint">Attributes shipped with every <code>env.${escape(flags.bindingName ?? "FLAGS")}.get*Value()</code> call. Targeting rules in the Flagship dashboard can match on these.</div>
@@ -131,11 +127,10 @@ export function gatewayIndexHtml<Env>(input: {
     </table>
   </div>`
       : !flags.bindingMissing
-        ? `<p class="hint">No evaluation context — the request is anonymous. Flag rules will fall back to defaults until you authenticate.</p>`
+        ? `<p class="hint">No evaluation context — the request is anonymous. Flag rules use configured defaults until you authenticate.</p>`
         : ""
-  }
-  ${
-    flags.gates && Object.keys(flags.gates).length > 0
+    }
+  ${flags.gates && Object.keys(flags.gates).length > 0
       ? `<div class="card">
     <div class="card-h">Service-mount gates</div>
     <div class="hint">When a gate flag evaluates to <code>false</code>, the matched mount short-circuits without forwarding.</div>
@@ -149,12 +144,11 @@ export function gatewayIndexHtml<Env>(input: {
     </table>
   </div>`
       : ""
-  }
-  ${
-    flags.forwarded && Object.keys(flags.forwarded).length > 0
+    }
+  ${flags.forwarded && Object.keys(flags.forwarded).length > 0
       ? `<div class="card">
     <div class="card-h">Forwarded flags <span class="hint">(this request)</span></div>
-    <div class="hint">Pre-evaluated values rolled into the signed gateway context as <code>ctx.gateway.flags</code>.</div>
+    <div class="hint">Pre-evaluated values rolled into the private gateway context as <code>ctx.gateway.flags</code>.</div>
     <table class="kv">
       ${renderKeyValueTable(Object.entries(flags.forwarded))}
     </table>
@@ -162,7 +156,7 @@ export function gatewayIndexHtml<Env>(input: {
       : flags.evaluationContext
         ? `<p class="hint">No flags forwarded for this request. Configure <code>featureFlags({ forward: [...] })</code> to ship values to services.</p>`
         : ""
-  }`
+    }`
     : "";
 
   const mcp = input.mcp;
@@ -172,20 +166,20 @@ export function gatewayIndexHtml<Env>(input: {
     : mcpEndpointPath;
   const claudeConfig = mcp
     ? JSON.stringify(
-        {
-          mcpServers: {
-            [escape(mcp.serverInfo.name)
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, "-")
-              .replace(/(^-|-$)/g, "") || "gmode"]: {
-              url: mcpFullUrl,
-              transport: "streamable-http",
-            },
+      {
+        mcpServers: {
+          [escape(mcp.serverInfo.name)
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "") || "gmode"]: {
+            url: mcpFullUrl,
+            transport: "streamable-http",
           },
         },
-        null,
-        2,
-      )
+      },
+      null,
+      2,
+    )
     : "";
 
   const curlInit = mcp
@@ -225,11 +219,10 @@ curl -X POST ${mcpFullUrl} \\
       <tr><td class="k">endpoint</td><td class="v"><span class="str">"${escape(mcpFullUrl)}"</span></td></tr>
       <tr><td class="k">transport</td><td class="v"><span class="str">"streamable-http"</span></td></tr>
       <tr><td class="k">mode</td><td class="v"><span class="str">"${escape(mcp.mode)}"</span></td></tr>
-      ${
-        mcp.mode === "catalog"
-          ? `<tr><td class="k">tools</td><td class="v"><span class="str">"discover"</span>, <span class="str">"invoke"</span></td></tr>`
-          : `<tr><td class="k">tools</td><td class="v"><span class="hint">one per operation (see Swagger UI)</span></td></tr>`
-      }
+      ${mcp.mode === "catalog"
+      ? `<tr><td class="k">tools</td><td class="v"><span class="str">"discover"</span>, <span class="str">"invoke"</span></td></tr>`
+      : `<tr><td class="k">tools</td><td class="v"><span class="hint">one per operation (see Swagger UI)</span></td></tr>`
+    }
     </table>
   </div>
   <div class="card">
@@ -239,8 +232,7 @@ curl -X POST ${mcpFullUrl} \\
   </div>
   <div class="card">
     <div class="card-h">Quick test from your terminal</div>
-    <div class="hint">Confirm the handshake, list tools, and run ${
-      mcp.mode === "catalog" ? "<code>discover</code>" : "an operation"
+    <div class="hint">Confirm the handshake, list tools, and run ${mcp.mode === "catalog" ? "<code>discover</code>" : "an operation"
     }:</div>
     <pre class="codeblock"><code>${escape(curlInit)}</code></pre>
     <pre class="codeblock"><code>${escape(curlList)}</code></pre>
@@ -320,13 +312,12 @@ curl -X POST ${mcpFullUrl} \\
   </ul>
 
   <h2>Services${input.services.length ? ` (${input.services.length})` : ""}</h2>
-  ${
-    input.services.length === 0
+  ${input.services.length === 0
       ? '<p class="hint">No services registered yet. Call <code>gateway.service(name, { mount, binding })</code> to add one.</p>'
       : `<ul>
       ${servicesHtml}
     </ul>`
-  }
+    }
 ${flagsSection}${mcpSection}
   <footer>Request ID: <code>${escape(input.requestId)}</code></footer>
 </body>

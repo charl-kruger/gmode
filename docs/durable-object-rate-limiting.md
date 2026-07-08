@@ -21,14 +21,11 @@ export { DurableObjectRateLimiter };
 type Env = {
   USERS_API: Fetcher;
   RATE_LIMITER: DurableObjectNamespace<DurableObjectRateLimiter>;
-  INTERNAL_SIGNING_SECRET: string;
 };
 
 const gateway = createGateway<Env>({
   name: "Acme API",
-  version: "1.0.0",
-  internal: { signingSecret: (env) => env.INTERNAL_SIGNING_SECRET },
-});
+  version: "1.0.0",});
 
 gateway.use(
   durableObjectRateLimit<Env, "RATE_LIMITER">({

@@ -1,6 +1,6 @@
 import {
+  encodeGatewayContext,
   GMODE_HEADERS,
-  signGatewayContext,
   type GatewayContext,
 } from "@gmode/core";
 import { createExecutionContext } from "./mock-fetcher";
@@ -11,8 +11,7 @@ export type ServiceLike<Env> = {
 
 export type ServiceTestClientOptions = {
   baseUrl?: string;
-  signingSecret?: string;
-  gatewayContext?: Partial<GatewayContext> & { aud?: string };
+  gatewayContext?: Partial<GatewayContext> & { aud?: string; };
 };
 
 export type ServiceTestClient<Env> = {
@@ -32,11 +31,9 @@ export function createServiceTestClient<Env>(input: {
 }): ServiceTestClient<Env> {
   const baseUrl = input.options?.baseUrl ?? "https://service.test";
 
-  const buildSignedHeaders = async (
-    headers: Headers,
-  ): Promise<Headers> => {
+  const buildGatewayHeaders = (headers: Headers): Headers => {
     const out = new Headers(headers);
-    if (!input.options?.signingSecret) return out;
+    if (!input.options?.gatewayContext) return out;
     const now = Math.floor(Date.now() / 1000);
     const ctx: GatewayContext = {
       iss: "gmode-gateway",
@@ -49,7 +46,7 @@ export function createServiceTestClient<Env>(input: {
       expiresAt: now + 60,
       ...input.options.gatewayContext,
     };
-    const token = await signGatewayContext(ctx, input.options.signingSecret);
+    const token = encodeGatewayContext(ctx);
     out.set(GMODE_HEADERS.gatewayContext, token);
     out.set(GMODE_HEADERS.requestId, ctx.requestId);
     return out;
@@ -59,7 +56,7 @@ export function createServiceTestClient<Env>(input: {
     path: string,
     init?: RequestInit,
   ): Promise<Response> => {
-    const headers = await buildSignedHeaders(new Headers(init?.headers));
+    const headers = buildGatewayHeaders(new Headers(init?.headers));
     const url = new URL(path, baseUrl);
     const request = new Request(url.toString(), { ...init, headers });
     return input.service.fetch(request, input.env, createExecutionContext());

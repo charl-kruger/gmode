@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  signGatewayContext,
+  encodeGatewayContext,
   type FlagshipBinding,
   type GatewayContext,
 } from "@gmode/core";
@@ -8,42 +8,36 @@ import { createMockFlagship } from "@gmode/testing";
 import { z } from "zod";
 import { createRpcService } from "./service";
 
-const SIGNING = "rpc-test-secret";
-
 function execCtx(): ExecutionContext {
   return {
-    waitUntil() {},
-    passThroughOnException() {},
+    waitUntil() { },
+    passThroughOnException() { },
   } as ExecutionContext;
 }
 
-async function signToken(
+function contextToken(
   override: Partial<GatewayContext> = {},
-): Promise<string> {
+): string {
   const now = Math.floor(Date.now() / 1000);
-  return signGatewayContext(
-    {
-      iss: "gmode-gateway",
-      aud: "users",
-      requestId: "req_rpc",
-      authenticated: true,
-      scopes: [],
-      permissions: [],
-      issuedAt: now,
-      expiresAt: now + 60,
-      ...override,
-    },
-    SIGNING,
-  );
+  return encodeGatewayContext({
+    iss: "gmode-gateway",
+    aud: "users",
+    requestId: "req_rpc",
+    authenticated: true,
+    scopes: [],
+    permissions: [],
+    issuedAt: now,
+    expiresAt: now + 60,
+    ...override,
+  });
 }
 
 describe("createRpcService", () => {
   it("invokes a registered method and returns ok envelope", async () => {
-    type Env = { INTERNAL_SIGNING_SECRET: string };
+    type Env = Record<string, never>;
     const service = createRpcService<Env>({
       name: "Users API",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     }).method("getUserById", {
@@ -55,11 +49,11 @@ describe("createRpcService", () => {
       }),
     });
 
-    const token = await signToken();
+    const token = contextToken();
     const result = await service.invoke(
       "getUserById",
       { input: { id: "u1" }, context: token },
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(result).toEqual({
@@ -90,7 +84,7 @@ describe("createRpcService", () => {
     });
     const result = await service.invoke(
       "op",
-      { input: { n: "oops" } as unknown as { n: number } },
+      { input: { n: "oops" } as unknown as { n: number; } },
       {},
       execCtx(),
     );
@@ -99,11 +93,10 @@ describe("createRpcService", () => {
   });
 
   it("rejects missing gateway context when trustGateway is required", async () => {
-    type Env = { INTERNAL_SIGNING_SECRET: string };
+    type Env = Record<string, never>;
     const service = createRpcService<Env>({
       name: "Users API",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     }).method("op", {
@@ -113,7 +106,7 @@ describe("createRpcService", () => {
     const result = await service.invoke(
       "op",
       { input: null },
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(result.ok).toBe(false);
@@ -121,22 +114,21 @@ describe("createRpcService", () => {
   });
 
   it("rejects wrong audience", async () => {
-    type Env = { INTERNAL_SIGNING_SECRET: string };
+    type Env = Record<string, never>;
     const service = createRpcService<Env>({
       name: "Users API",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     }).method("op", {
       input: z.any(),
       handler: async () => null,
     });
-    const token = await signToken({ aud: "billing" });
+    const token = contextToken({ aud: "billing" });
     const result = await service.invoke(
       "op",
       { input: null, context: token },
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(result.ok).toBe(false);
@@ -146,11 +138,10 @@ describe("createRpcService", () => {
   });
 
   it("enforces scopes", async () => {
-    type Env = { INTERNAL_SIGNING_SECRET: string };
+    type Env = Record<string, never>;
     const service = createRpcService<Env>({
       name: "Users API",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     }).method("op", {
@@ -163,9 +154,9 @@ describe("createRpcService", () => {
       "op",
       {
         input: null,
-        context: await signToken({ scopes: ["billing:read"] }),
+        context: contextToken({ scopes: ["billing:read"] }),
       },
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(insufficient.ok).toBe(false);
@@ -177,9 +168,9 @@ describe("createRpcService", () => {
       "op",
       {
         input: null,
-        context: await signToken({ scopes: ["users:*"] }),
+        context: contextToken({ scopes: ["users:*"] }),
       },
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(ok).toEqual({ ok: true, data: "ok" });
@@ -202,7 +193,7 @@ describe("createRpcService", () => {
   });
 
   it("gates a method behind a feature flag (service-side)", async () => {
-    type Env = { FLAGS: FlagshipBinding };
+    type Env = { FLAGS: FlagshipBinding; };
     const flags = createMockFlagship({ booleans: { "rpc-v2": false } });
     const service = createRpcService<Env>({
       name: "X",
@@ -232,12 +223,11 @@ describe("createRpcService", () => {
     expect(on).toEqual({ ok: true, data: "v2" });
   });
 
-  it("falls back to gateway-forwarded flags when no service binding", async () => {
-    type Env = { INTERNAL_SIGNING_SECRET: string };
+  it("uses gateway-forwarded flags when no service binding is configured", async () => {
+    type Env = Record<string, never>;
     const service = createRpcService<Env>({
       name: "X",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     }).method("op", {
@@ -250,9 +240,9 @@ describe("createRpcService", () => {
       "op",
       {
         input: null,
-        context: await signToken({ flags: { "from-gateway": false } }),
+        context: contextToken({ flags: { "from-gateway": false } }),
       },
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(off.ok).toBe(false);
@@ -261,21 +251,20 @@ describe("createRpcService", () => {
       "op",
       {
         input: null,
-        context: await signToken({ flags: { "from-gateway": true } }),
+        context: contextToken({ flags: { "from-gateway": true } }),
       },
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(on).toEqual({ ok: true, data: "ok" });
   });
 
-  it("hands the verified gateway to the handler", async () => {
-    type Env = { INTERNAL_SIGNING_SECRET: string };
+  it("hands the decoded gateway context to the handler", async () => {
+    type Env = Record<string, never>;
     let seen: GatewayContext | null = null;
     const service = createRpcService<Env>({
       name: "X",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     }).method("op", {
@@ -286,14 +275,14 @@ describe("createRpcService", () => {
       },
     });
 
-    const token = await signToken({
+    const token = contextToken({
       user: { id: "u1", email: "u1@example.com" },
       scopes: ["users:read"],
     });
     await service.invoke(
       "op",
       { input: null, context: token },
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(seen).toBeTruthy();

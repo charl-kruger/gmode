@@ -13,8 +13,5 @@
       "binding": "USERS_API",
       "service": "gmode-example-users-api"
     }
-  ],
-  "secrets": {
-    "required": ["INTERNAL_SIGNING_SECRET"]
-  }
+  ]
 }

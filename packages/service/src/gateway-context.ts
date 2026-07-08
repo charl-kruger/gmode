@@ -1,8 +1,7 @@
 import {
   ApiError,
   GMODE_HEADERS,
-  resolveEnvValue,
-  verifyGatewayContext,
+  decodeGatewayContext,
   type GatewayContext,
 } from "@gmode/core";
 import type { ServiceOptions } from "./types";
@@ -12,11 +11,10 @@ export type GatewayState = {
   context?: GatewayContext;
 };
 
-export async function verifyServiceGatewayContext<Env>(input: {
+export function verifyServiceGatewayContext<Env>(input: {
   request: Request;
-  env: Env;
   options: ServiceOptions<Env>["trustGateway"] | undefined;
-}): Promise<GatewayState> {
+}): GatewayState {
   if (!input.options) {
     return { authenticated: false };
   }
@@ -33,8 +31,7 @@ export async function verifyServiceGatewayContext<Env>(input: {
     });
   }
 
-  const secret = resolveEnvValue(input.options.signingSecret, input.env);
-  const context = await verifyGatewayContext(token, secret, {
+  const context = decodeGatewayContext(token, {
     audience: input.options.audience,
   });
 

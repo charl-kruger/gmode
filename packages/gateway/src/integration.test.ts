@@ -12,12 +12,10 @@ import { jsonErrors } from "./middleware/json-errors";
 import { cloudflareRateLimit } from "./middleware/cloudflare-rate-limit";
 import { featureFlags } from "./middleware/feature-flags";
 
-const SIGNING = "internal-signing-secret";
-
 function execCtx(): ExecutionContext {
   return {
-    waitUntil() {},
-    passThroughOnException() {},
+    waitUntil() { },
+    passThroughOnException() { },
   } as ExecutionContext;
 }
 
@@ -30,9 +28,9 @@ function bindService<E>(svc: {
 }
 
 function mockRateLimit(allow = true): CloudflareRateLimitBinding & {
-  calls: { key: string }[];
+  calls: { key: string; }[];
 } {
-  const calls: { key: string }[] = [];
+  const calls: { key: string; }[] = [];
   return {
     calls,
     async limit(input) {
@@ -43,12 +41,11 @@ function mockRateLimit(allow = true): CloudflareRateLimitBinding & {
 }
 
 describe("integration: gateway → service", () => {
-  type ServiceEnv = { INTERNAL_SIGNING_SECRET: string };
+  type ServiceEnv = Record<string, never>;
   type GatewayEnv = {
     USERS_API: FetcherLike;
     BILLING_API: FetcherLike;
     RL: CloudflareRateLimitBinding;
-    INTERNAL_SIGNING_SECRET: string;
   };
 
   function buildUsers() {
@@ -56,7 +53,6 @@ describe("integration: gateway → service", () => {
       name: "Users API",
       version: "1.0.0",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     });
@@ -75,7 +71,6 @@ describe("integration: gateway → service", () => {
       name: "Billing API",
       version: "1.0.0",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "billing",
       },
     });
@@ -92,7 +87,6 @@ describe("integration: gateway → service", () => {
     const gateway = createGateway<GatewayEnv>({
       name: "Test API",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -117,12 +111,9 @@ describe("integration: gateway → service", () => {
     const billingSvc = buildBilling();
     const rl = mockRateLimit();
     const env: GatewayEnv = {
-      USERS_API: bindService(usersSvc, { INTERNAL_SIGNING_SECRET: SIGNING }),
-      BILLING_API: bindService(billingSvc, {
-        INTERNAL_SIGNING_SECRET: SIGNING,
-      }),
+      USERS_API: bindService(usersSvc, {}),
+      BILLING_API: bindService(billingSvc, {}),
       RL: rl,
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const gateway = buildGateway(env);
     const res = await gateway.fetch(
@@ -131,7 +122,7 @@ describe("integration: gateway → service", () => {
       execCtx(),
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
+    const body = (await res.json()) as { id: string; };
     expect(body.id).toBe("123");
     expect(rl.calls).toHaveLength(1);
   });
@@ -141,12 +132,9 @@ describe("integration: gateway → service", () => {
     const billingSvc = buildBilling();
     const rl = mockRateLimit();
     const env: GatewayEnv = {
-      USERS_API: bindService(usersSvc, { INTERNAL_SIGNING_SECRET: SIGNING }),
-      BILLING_API: bindService(billingSvc, {
-        INTERNAL_SIGNING_SECRET: SIGNING,
-      }),
+      USERS_API: bindService(usersSvc, {}),
+      BILLING_API: bindService(billingSvc, {}),
       RL: rl,
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const gateway = buildGateway(env);
     const res = await gateway.fetch(
@@ -164,13 +152,12 @@ describe("integration: gateway → service", () => {
     expect(spec.paths["/billing/ping"]).toBeDefined();
   });
 
-  it("forwards pre-evaluated flags to service via signed context", async () => {
-    type SvcEnv = { INTERNAL_SIGNING_SECRET: string };
+  it("forwards pre-evaluated flags to service via private context", async () => {
+    type SvcEnv = Record<string, never>;
     const usersSvc = createService<SvcEnv>({
       name: "Users API",
       version: "1.0.0",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     });
@@ -191,20 +178,16 @@ describe("integration: gateway → service", () => {
     });
     const billingSvc = buildBilling();
     const flags = createMockFlagship({ booleans: { "new-checkout": true } });
-    type Env2 = GatewayEnv & { FLAGS: FlagshipBinding };
+    type Env2 = GatewayEnv & { FLAGS: FlagshipBinding; };
     const env: Env2 = {
-      USERS_API: bindService(usersSvc, { INTERNAL_SIGNING_SECRET: SIGNING }),
-      BILLING_API: bindService(billingSvc, {
-        INTERNAL_SIGNING_SECRET: SIGNING,
-      }),
+      USERS_API: bindService(usersSvc, {}),
+      BILLING_API: bindService(billingSvc, {}),
       RL: mockRateLimit(),
       FLAGS: flags,
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const gateway = createGateway<Env2>({
       name: "Test API",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -222,7 +205,7 @@ describe("integration: gateway → service", () => {
       execCtx(),
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string; newCheckout: boolean };
+    const body = (await res.json()) as { id: string; newCheckout: boolean; };
     expect(body.id).toBe("123");
     expect(body.newCheckout).toBe(true);
   });
@@ -231,12 +214,9 @@ describe("integration: gateway → service", () => {
     const usersSvc = buildUsers();
     const billingSvc = buildBilling();
     const env: GatewayEnv = {
-      USERS_API: bindService(usersSvc, { INTERNAL_SIGNING_SECRET: SIGNING }),
-      BILLING_API: bindService(billingSvc, {
-        INTERNAL_SIGNING_SECRET: SIGNING,
-      }),
+      USERS_API: bindService(usersSvc, {}),
+      BILLING_API: bindService(billingSvc, {}),
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const gateway = buildGateway(env);
     const res = await gateway.fetch(
@@ -254,18 +234,14 @@ describe("integration: gateway → service", () => {
     const usersSvc = buildUsers();
     const billingSvc = buildBilling();
     const env: GatewayEnv = {
-      USERS_API: bindService(usersSvc, { INTERNAL_SIGNING_SECRET: SIGNING }),
-      BILLING_API: bindService(billingSvc, {
-        INTERNAL_SIGNING_SECRET: SIGNING,
-      }),
+      USERS_API: bindService(usersSvc, {}),
+      BILLING_API: bindService(billingSvc, {}),
       RL: mockRateLimit(),
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const gateway = createGateway<GatewayEnv>({
       name: "Test API",
       version: "1.0.0",
       docs: { scalar: "/reference", ui: "scalar" },
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.service("users", {
       mount: "/users",

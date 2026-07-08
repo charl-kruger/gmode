@@ -44,6 +44,6 @@
     "enabled": false,
   },
   "secrets": {
-    "required": ["JWT_SECRET", "INTERNAL_SIGNING_SECRET"],
+    "required": ["JWT_SECRET"],
   },
 }

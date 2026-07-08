@@ -1,8 +1,4 @@
-import {
-  ApiError,
-  resolveEnvValue,
-  type GatewayContext,
-} from "@gmode/core";
+import { ApiError, type GatewayContext } from "@gmode/core";
 import {
   authorizeForService,
   forwardToService,
@@ -88,7 +84,7 @@ async function evaluateFeatureFlag<Env>(
 
 async function parseResponseBody(
   res: Response,
-): Promise<{ contentType: string | null; body: unknown }> {
+): Promise<{ contentType: string | null; body: unknown; }> {
   const contentType = res.headers.get("content-type");
   if (contentType && contentType.includes("application/json")) {
     try {
@@ -223,10 +219,6 @@ export async function invokeOperation<Env>(input: {
       substitutedPath === "" ? "/" : substitutedPath;
   }
 
-  const signingSecret = resolveEnvValue(
-    internals.signingSecret,
-    context.env,
-  );
   const audience = service.config.audience ?? service.name;
   const gatewayContext = buildGatewayContextFor(
     context as GatewayRequestContext<unknown>,
@@ -241,7 +233,6 @@ export async function invokeOperation<Env>(input: {
     serviceName: service.name,
     rewrittenUrl,
     gatewayContext,
-    signingSecret,
     context,
   });
 

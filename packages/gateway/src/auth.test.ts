@@ -11,8 +11,6 @@ import { jsonErrors } from "./middleware/json-errors";
 import { jwtAuth } from "./middleware/auth";
 
 const JWT_SECRET = "jwt-test-secret";
-const SIGNING = "internal-signing-secret";
-
 async function makeJwt(claims: Record<string, unknown>): Promise<string> {
   const header = base64urlEncodeString(
     JSON.stringify({ alg: "HS256", typ: "JWT" }),
@@ -30,20 +28,19 @@ function mockFetcher(handler: (req: Request) => Response) {
       calls.push(req);
       return handler(req);
     },
-  } satisfies FetcherLike & { calls: Request[] };
+  } satisfies FetcherLike & { calls: Request[]; };
 }
 
 function execCtx(): ExecutionContext {
   return {
-    waitUntil() {},
-    passThroughOnException() {},
+    waitUntil() { },
+    passThroughOnException() { },
   } as ExecutionContext;
 }
 
 type Env = {
   USERS_API: FetcherLike;
   RL: CloudflareRateLimitBinding;
-  INTERNAL_SIGNING_SECRET: string;
 };
 
 function buildGateway() {
@@ -51,11 +48,13 @@ function buildGateway() {
   const gateway = createGateway<Env>({
     name: "T",
     version: "1.0.0",
-    internal: { signingSecret: () => SIGNING },
   });
   gateway.use(requestId());
   gateway.use(jsonErrors());
-  gateway.use(jwtAuth<Env>({ secret: () => JWT_SECRET, required: true }));
+  gateway.use(jwtAuth<Env>({
+    secret: () => JWT_SECRET,
+    required: true
+  }));
   gateway.service("users", { mount: "/users", binding: "USERS_API" });
   return { gateway, users };
 }
@@ -77,7 +76,6 @@ describe("jwtAuth", () => {
       {
         USERS_API: users,
         RL: {} as CloudflareRateLimitBinding,
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
@@ -91,12 +89,11 @@ describe("jwtAuth", () => {
       {
         USERS_API: users,
         RL: {} as CloudflareRateLimitBinding,
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
     expect(res.status).toBe(401);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("MISSING_AUTH_TOKEN");
   });
 
@@ -111,12 +108,11 @@ describe("jwtAuth", () => {
       {
         USERS_API: users,
         RL: {} as CloudflareRateLimitBinding,
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
     expect(res.status).toBe(401);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("AUTH_TOKEN_EXPIRED");
   });
 
@@ -139,7 +135,6 @@ describe("jwtAuth", () => {
       {
         USERS_API: users,
         RL: {} as CloudflareRateLimitBinding,
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );

@@ -9,9 +9,7 @@ public prefix such as `/v1` or `/v2`.
 ```ts
 const gateway = createGateway<Env>({
   name: "Acme API",
-  version: "2.0.0",
-  internal: { signingSecret: (env) => env.INTERNAL_SIGNING_SECRET },
-});
+  version: "2.0.0",});
 
 gateway
   .apiVersion({ name: "v1", prefix: "/v1" })
@@ -34,7 +32,7 @@ gateway
 
 Requests to `/v1/users/:id` reach `USERS_V1` as `/:id`. Requests to
 `/v2/users/:id` reach `USERS_V2` as `/:id`. Gateway auth, request IDs,
-idempotency, rate limiting, feature flags, signed gateway context, and service
+idempotency, rate limiting, feature flags, private gateway context, and service
 OpenAPI aggregation all continue to run through the same gateway pipeline.
 
 ## Deprecate A Version

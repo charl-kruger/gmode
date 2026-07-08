@@ -14,6 +14,9 @@ Bindings. In the gateway `wrangler.jsonc`:
 ```
 
 The binding name must match the `binding` used in `gateway.service(...)`.
+Downstream service Workers should be private: set `workers_dev: false` and do
+not attach routes or custom domains. The public gateway is the only Worker that
+needs an Internet-facing route.
 
 ## Workers Cache
 
@@ -26,7 +29,6 @@ and forwards it to the service binding as Cloudflare `cf.cacheControl` for
 const gateway = createGateway<Env>({
   name: "Example API",
   version: "1.0.0",
-  internal: { signingSecret: (env) => env.INTERNAL_SIGNING_SECRET },
   cache: {
     enabled: true,
     default: {
@@ -151,11 +153,11 @@ Wrangler secrets:
 
 ```bash
 wrangler secret put JWT_SECRET
-wrangler secret put INTERNAL_SIGNING_SECRET
 ```
 
-`INTERNAL_SIGNING_SECRET` must be identical across the gateway and every
-service that verifies gateway context. Do not put secrets in `vars`.
+Do not put secrets in `vars`. GMode does not require a shared internal signing
+secret for gateway-to-service calls; the downstream services trust gateway
+context because they are only reachable through Cloudflare Service Bindings.
 
 Declare required secrets in each Worker config so Wrangler fails deployment
 when a required production secret is missing:
@@ -164,15 +166,14 @@ when a required production secret is missing:
 {
   "secrets": {
     "required": [
-      { "name": "JWT_SECRET" },
-      { "name": "INTERNAL_SIGNING_SECRET" }
+      { "name": "JWT_SECRET" }
     ]
   }
 }
 ```
 
-Runtime code still fails fast if a secret is absent, but `secrets.required`
-catches the mistake before traffic reaches the Worker.
+Runtime code still fails fast if a required secret is absent, but
+`secrets.required` catches the mistake before traffic reaches the Worker.
 
 ## Observability
 

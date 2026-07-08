@@ -21,15 +21,11 @@ type Env = {
   API_RATE_LIMITER: CloudflareRateLimitBinding;
   FLAGS: FlagshipBinding;
   JWT_SECRET: string;
-  INTERNAL_SIGNING_SECRET: string;
 };
 
 const gateway = createGateway<Env>({
   name: "Example API",
   version: "1.0.0",
-  internal: {
-    signingSecret: (env) => env.INTERNAL_SIGNING_SECRET,
-  },
   cache: {
     enabled: true,
     default: {

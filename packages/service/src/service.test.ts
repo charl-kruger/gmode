@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  encodeGatewayContext,
   GMODE_HEADERS,
-  signGatewayContext,
   type GatewayContext,
 } from "@gmode/core";
 import { createMockFlagship } from "@gmode/testing";
@@ -9,18 +9,16 @@ import { z } from "zod";
 import { createService } from "./create-service";
 import { withJsonSchema, type StandardSchemaV1 } from "./schema";
 
-const SIGNING = "internal-signing-secret";
-
 function execCtx(): ExecutionContext {
   return {
-    waitUntil() {},
-    passThroughOnException() {},
+    waitUntil() { },
+    passThroughOnException() { },
   } as ExecutionContext;
 }
 
-async function makeContextToken(
+function makeContextToken(
   override: Partial<GatewayContext> = {},
-): Promise<string> {
+): string {
   const now = Math.floor(Date.now() / 1000);
   const ctx: GatewayContext = {
     iss: "gmode-gateway",
@@ -33,16 +31,15 @@ async function makeContextToken(
     expiresAt: now + 60,
     ...override,
   };
-  return signGatewayContext(ctx, SIGNING);
+  return encodeGatewayContext(ctx);
 }
 
 function buildService() {
-  type Env = { INTERNAL_SIGNING_SECRET: string };
+  type Env = Record<string, never>;
   const service = createService<Env>({
     name: "Users API",
     version: "1.0.0",
     trustGateway: {
-      signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
       audience: "users",
     },
   });
@@ -75,7 +72,7 @@ function buildService() {
     },
     scopes: ["users:write"],
     handler: async ({ body, created }) =>
-      created({ id: `u_${(body as { name: string }).name}` }),
+      created({ id: `u_${(body as { name: string; }).name}` }),
   });
 
   return service;
@@ -86,11 +83,11 @@ describe("service", () => {
     const service = buildService();
     const res = await service.fetch(
       new Request("https://svc.test/"),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(res.status).toBe(401);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("MISSING_GATEWAY_CONTEXT");
   });
 
@@ -102,7 +99,7 @@ describe("service", () => {
       new Request("https://svc.test/", {
         headers: { [GMODE_HEADERS.gatewayContext]: token },
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(res.status).toBe(401);
@@ -115,7 +112,7 @@ describe("service", () => {
       new Request("https://svc.test/", {
         headers: { [GMODE_HEADERS.gatewayContext]: token },
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(res.status).toBe(401);
@@ -128,11 +125,11 @@ describe("service", () => {
       new Request("https://svc.test/123", {
         headers: { [GMODE_HEADERS.gatewayContext]: token },
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
+    const body = (await res.json()) as { id: string; };
     expect(body.id).toBe("123");
   });
 
@@ -143,7 +140,7 @@ describe("service", () => {
       new Request("https://svc.test/123", {
         headers: { [GMODE_HEADERS.gatewayContext]: token },
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(res.status).toBe(403);
@@ -156,7 +153,7 @@ describe("service", () => {
       new Request("https://svc.test/123", {
         headers: { [GMODE_HEADERS.gatewayContext]: token },
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(res.status).toBe(200);
@@ -174,7 +171,7 @@ describe("service", () => {
         },
         body: "hello",
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(res.status).toBe(415);
@@ -192,11 +189,11 @@ describe("service", () => {
         },
         body: "not json",
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("INVALID_JSON");
   });
 
@@ -212,11 +209,11 @@ describe("service", () => {
         },
         body: JSON.stringify({ wrong: "field" }),
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
@@ -227,7 +224,7 @@ describe("service", () => {
       new Request("https://svc.test/", {
         headers: { [GMODE_HEADERS.gatewayContext]: token },
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(res.status).toBe(200);
@@ -238,7 +235,7 @@ describe("service", () => {
     const service = buildService();
     const res = await service.fetch(
       new Request("https://svc.test/__gmode/openapi.json"),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(res.status).toBe(200);
@@ -254,10 +251,10 @@ describe("service", () => {
   });
 
   it("accepts Standard Schema validators with explicit JSON Schema for OpenAPI", async () => {
-    type Env = { INTERNAL_SIGNING_SECRET: string };
+    type Env = Record<string, never>;
     const createBodySchema: StandardSchemaV1<
       unknown,
-      { name: string }
+      { name: string; }
     > = {
       "~standard": {
         version: 1,
@@ -285,7 +282,6 @@ describe("service", () => {
       name: "Standard Schema API",
       version: "1.0.0",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     });
@@ -300,7 +296,7 @@ describe("service", () => {
         201: z.object({ id: z.string() }),
       },
       handler: ({ body, created }) => {
-        const input = body as { name: string };
+        const input = body as { name: string; };
         return created({ id: `std_${input.name}` });
       },
     });
@@ -315,11 +311,11 @@ describe("service", () => {
         },
         body: JSON.stringify({ name: "ada" }),
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(valid.status).toBe(201);
-    expect((await valid.json()) as { id: string }).toEqual({ id: "std_ada" });
+    expect((await valid.json()) as { id: string; }).toEqual({ id: "std_ada" });
 
     const invalid = await service.fetch(
       new Request("https://svc.test/standard", {
@@ -330,19 +326,19 @@ describe("service", () => {
         },
         body: JSON.stringify({ wrong: "field" }),
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(invalid.status).toBe(400);
     const invalidBody = (await invalid.json()) as {
-      error: { code: string; details: { vendor: string } };
+      error: { code: string; details: { vendor: string; }; };
     };
     expect(invalidBody.error.code).toBe("VALIDATION_ERROR");
     expect(invalidBody.error.details.vendor).toBe("gmode-test");
 
     const openapi = await service.fetch(
       new Request("https://svc.test/__gmode/openapi.json"),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     const doc = (await openapi.json()) as {
@@ -351,7 +347,7 @@ describe("service", () => {
         {
           post?: {
             requestBody?: {
-              content?: Record<string, { schema?: Record<string, unknown> }>;
+              content?: Record<string, { schema?: Record<string, unknown>; }>;
             };
           };
         }
@@ -369,21 +365,21 @@ describe("service", () => {
   });
 
   it("fails clearly when a Standard Schema route has no JSON Schema for OpenAPI", async () => {
-    type Env = { INTERNAL_SIGNING_SECRET: string };
-    const schema: StandardSchemaV1<unknown, { id: string }> = {
+    type Env = Record<string, never>;
+    const schema: StandardSchemaV1<unknown, { id: string; }> = {
       "~standard": {
         version: 1,
         vendor: "gmode-test",
         validate: (value) =>
           typeof value === "object" &&
-          value !== null &&
-          !Array.isArray(value) &&
-          typeof (value as Record<string, unknown>)["id"] === "string"
+            value !== null &&
+            !Array.isArray(value) &&
+            typeof (value as Record<string, unknown>)["id"] === "string"
             ? {
-                value: {
-                  id: (value as Record<string, string>)["id"]!,
-                },
-              }
+              value: {
+                id: (value as Record<string, string>)["id"]!,
+              },
+            }
             : { issues: [{ message: "id is required" }] },
       },
     };
@@ -391,7 +387,6 @@ describe("service", () => {
       name: "Unsupported Standard Schema API",
       version: "1.0.0",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     });
@@ -404,18 +399,17 @@ describe("service", () => {
 
     const res = await service.fetch(
       new Request("https://svc.test/__gmode/openapi.json"),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(res.status).toBe(500);
-    const body = (await res.json()) as { error: { message: string } };
+    const body = (await res.json()) as { error: { message: string; }; };
     expect(body.error.message).toMatch(/withJsonSchema/);
   });
 });
 
 describe("service feature flags", () => {
   type Env = {
-    INTERNAL_SIGNING_SECRET: string;
     FLAGS: ReturnType<typeof createMockFlagship>;
   };
 
@@ -424,7 +418,6 @@ describe("service feature flags", () => {
       name: "Users API",
       version: "1.0.0",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
       flags: { binding: (env) => env.FLAGS },
@@ -450,21 +443,18 @@ describe("service feature flags", () => {
     return service;
   }
 
-  async function ctxToken(): Promise<string> {
+  function ctxToken(): string {
     const now = Math.floor(Date.now() / 1000);
-    return signGatewayContext(
-      {
-        iss: "gmode-gateway",
-        aud: "users",
-        requestId: "req_1",
-        authenticated: true,
-        scopes: [],
-        permissions: [],
-        issuedAt: now,
-        expiresAt: now + 60,
-      },
-      SIGNING,
-    );
+    return encodeGatewayContext({
+      iss: "gmode-gateway",
+      aud: "users",
+      requestId: "req_1",
+      authenticated: true,
+      scopes: [],
+      permissions: [],
+      issuedAt: now,
+      expiresAt: now + 60,
+    });
   }
 
   it("returns 404 when feature flag is off (service-side eval)", async () => {
@@ -475,7 +465,7 @@ describe("service feature flags", () => {
       new Request("https://svc.test/gated", {
         headers: { [GMODE_HEADERS.gatewayContext]: token },
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING, FLAGS: flags },
+      { FLAGS: flags },
       execCtx(),
     );
     expect(res.status).toBe(404);
@@ -494,7 +484,7 @@ describe("service feature flags", () => {
       new Request("https://svc.test/gated", {
         headers: { [GMODE_HEADERS.gatewayContext]: token },
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING, FLAGS: flags },
+      { FLAGS: flags },
       execCtx(),
     );
     expect(res.status).toBe(200);
@@ -508,21 +498,20 @@ describe("service feature flags", () => {
       new Request("https://svc.test/inline", {
         headers: { [GMODE_HEADERS.gatewayContext]: token },
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING, FLAGS: flags },
+      { FLAGS: flags },
       execCtx(),
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { show: boolean };
+    const body = (await res.json()) as { show: boolean; };
     expect(body.show).toBe(true);
   });
 
-  it("falls back to gateway-forwarded flags when no service binding", async () => {
-    type EnvNoBinding = { INTERNAL_SIGNING_SECRET: string };
+  it("uses gateway-forwarded flags when no service binding is configured", async () => {
+    type EnvNoBinding = Record<string, never>;
     const service = createService<EnvNoBinding>({
       name: "Users API",
       version: "1.0.0",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     });
@@ -535,48 +524,42 @@ describe("service feature flags", () => {
     });
 
     const now = Math.floor(Date.now() / 1000);
-    const tokenOn = await signGatewayContext(
-      {
-        iss: "gmode-gateway",
-        aud: "users",
-        requestId: "r1",
-        authenticated: true,
-        scopes: [],
-        permissions: [],
-        issuedAt: now,
-        expiresAt: now + 60,
-        flags: { "from-gateway": true },
-      },
-      SIGNING,
-    );
+    const tokenOn = encodeGatewayContext({
+      iss: "gmode-gateway",
+      aud: "users",
+      requestId: "r1",
+      authenticated: true,
+      scopes: [],
+      permissions: [],
+      issuedAt: now,
+      expiresAt: now + 60,
+      flags: { "from-gateway": true },
+    });
     const onRes = await service.fetch(
       new Request("https://svc.test/gated", {
         headers: { [GMODE_HEADERS.gatewayContext]: tokenOn },
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(onRes.status).toBe(200);
 
-    const tokenOff = await signGatewayContext(
-      {
-        iss: "gmode-gateway",
-        aud: "users",
-        requestId: "r2",
-        authenticated: true,
-        scopes: [],
-        permissions: [],
-        issuedAt: now,
-        expiresAt: now + 60,
-        flags: { "from-gateway": false },
-      },
-      SIGNING,
-    );
+    const tokenOff = encodeGatewayContext({
+      iss: "gmode-gateway",
+      aud: "users",
+      requestId: "r2",
+      authenticated: true,
+      scopes: [],
+      permissions: [],
+      issuedAt: now,
+      expiresAt: now + 60,
+      flags: { "from-gateway": false },
+    });
     const offRes = await service.fetch(
       new Request("https://svc.test/gated", {
         headers: { [GMODE_HEADERS.gatewayContext]: tokenOff },
       }),
-      { INTERNAL_SIGNING_SECRET: SIGNING },
+      {},
       execCtx(),
     );
     expect(offRes.status).toBe(404);
@@ -587,7 +570,6 @@ describe("service feature flags", () => {
     const res = await service.fetch(
       new Request("https://svc.test/__gmode/openapi.json"),
       {
-        INTERNAL_SIGNING_SECRET: SIGNING,
         FLAGS: createMockFlagship(),
       },
       execCtx(),

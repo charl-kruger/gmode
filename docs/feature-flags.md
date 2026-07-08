@@ -28,7 +28,7 @@ gateway.use(
 ```
 
 - `gates` can disable whole service mounts.
-- `forward` pre-evaluates flags and includes them in signed gateway context.
+- `forward` pre-evaluates flags and includes them in the private gateway context.
 - The default evaluation context is built from auth: user ID, email, tenant ID, scopes, and request ID.
 - `gateBehavior: "503"` is available when disabled features should return 503 instead of 404.
 
@@ -38,7 +38,7 @@ gateway.use(
 const service = createService<Env>({
   name: "Users API",
   version: "1.0.0",
-  trustGateway: { signingSecret, audience: "users" },
+  trustGateway: { audience: "users" },
   flags: { binding: (env) => env.FLAGS },
 });
 

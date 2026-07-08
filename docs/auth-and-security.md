@@ -59,14 +59,19 @@ gateway.use(
 The verified cert is available at `context.auth.raw.mtls` and
 `context.state.get("gmode.mtls")`.
 
-## Signed Gateway Context
+## Private Gateway Context
 
-Per request, the gateway signs a context token with HMAC-SHA256 and forwards
-it as `x-gmode-context`. Services configured with `trustGateway` verify the
-token before running handlers.
+Per request, the gateway forwards an encoded context header as
+`x-gmode-context`. Services configured with `trustGateway` decode it, check the
+issuer, audience, and expiry, then expose it to handlers as `ctx.gateway`.
 
 Client-supplied `x-gmode-*` headers are stripped before forwarding, so
-clients cannot forge internal identity or request context.
+clients cannot override the gateway-generated identity or request context.
+
+This model assumes downstream services are private Workers reached only through
+Cloudflare Service Bindings. Keep `workers_dev: false` and do not attach routes
+or custom domains to service Workers. If a service must be public, protect that
+public route with its own authentication layer.
 
 ## Hidden Landing Page
 

@@ -3,7 +3,6 @@ import {
   GMODE_HEADERS,
   PUBLIC_REQUEST_ID_HEADER,
   json,
-  resolveEnvValue,
   serializeError,
   toShieldCompatibleSpec,
   type AuthContext,
@@ -76,7 +75,7 @@ function buildDefaults<Env>(
     scalarPath,
     docsUi,
     indexPath,
-    tokenTtlSeconds: options.internal.tokenTtlSeconds ?? 60,
+    tokenTtlSeconds: options.internal?.tokenTtlSeconds ?? 60,
     basePath: options.basePath ?? "",
   };
 }
@@ -282,7 +281,6 @@ async function handleRequest<Env>(
   context.state.set(GATEWAY_INTERNALS_STATE_KEY, {
     services: internals.services,
     defaults: internals.defaults,
-    signingSecret: internals.options.internal.signingSecret,
   });
 
   const middleware = internals.middleware;
@@ -407,7 +405,7 @@ async function route<Env>(
         const m = mcpRaw as {
           path?: unknown;
           mode?: unknown;
-          serverInfo?: { name?: unknown; version?: unknown };
+          serverInfo?: { name?: unknown; version?: unknown; };
         };
         if (
           typeof m.path === "string" &&
@@ -471,10 +469,6 @@ async function route<Env>(
   );
 
   const rewrittenUrl = buildInternalUrl(context.url, match.rewrittenPath);
-  const signingSecret = resolveEnvValue(
-    internals.options.internal.signingSecret,
-    context.env,
-  );
   const cache = resolveDownstreamCachePolicy(context, internals, match.service);
 
   const response = await forwardToService({
@@ -484,7 +478,6 @@ async function route<Env>(
     serviceName: match.service.name,
     rewrittenUrl,
     gatewayContext,
-    signingSecret,
     context,
     ...(cache ? { cache } : {}),
   });

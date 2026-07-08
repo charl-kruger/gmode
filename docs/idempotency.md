@@ -38,14 +38,11 @@ type IdempotencyKv = {
 type Env = {
   USERS_API: FetcherLike;
   IDEMPOTENCY: IdempotencyKv;
-  INTERNAL_SIGNING_SECRET: string;
 };
 
 const gateway = createGateway<Env>({
   name: "Example API",
-  version: "1.0.0",
-  internal: { signingSecret: (env) => env.INTERNAL_SIGNING_SECRET },
-});
+  version: "1.0.0",});
 
 gateway.use(
   idempotency({

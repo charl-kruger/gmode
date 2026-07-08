@@ -65,7 +65,7 @@ The CLI package is published as `@gmode/cli`; its command binary is `gmode`.
 | Build a gateway and service | [Getting started](./docs/getting-started.md) |
 | Configure Service Bindings, secrets, cache, observability, rate limits, KV | [Cloudflare configuration](./docs/cloudflare-configuration.md) |
 | Resolve and test D1, R2, Queue, and KV bindings | [Cloudflare binding helpers](./docs/cloudflare-binding-helpers.md) |
-| Add JWT, API keys, mTLS, signed context | [Auth and security](./docs/auth-and-security.md) |
+| Add JWT, API keys, mTLS, private service context | [Auth and security](./docs/auth-and-security.md) |
 | Add retry-safe writes | [Idempotency](./docs/idempotency.md) |
 | Add globally coordinated rate limits | [Durable Object rate limiting](./docs/durable-object-rate-limiting.md) |
 | Add Cloudflare Flagship feature flags | [Feature flags](./docs/feature-flags.md) |

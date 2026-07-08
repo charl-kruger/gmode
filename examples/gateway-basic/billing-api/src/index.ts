@@ -4,7 +4,6 @@ import { GMODE_HEADERS } from "@gmode/core";
 import type { UsersApiRpc } from "../../users-api/src/index";
 
 type Env = {
-  INTERNAL_SIGNING_SECRET: string;
   USERS_API: UsersApiRpc;
 };
 
@@ -12,7 +11,6 @@ const service = createService<Env>({
   name: "Billing API",
   version: "1.0.0",
   trustGateway: {
-    signingSecret: (env) => env.INTERNAL_SIGNING_SECRET,
     audience: "billing",
   },
 });
@@ -72,8 +70,8 @@ service.post("/invoices", {
 
     const users = createRpcClient<{
       getUserById: {
-        input: { id: string };
-        output: { id: string; email: string };
+        input: { id: string; };
+        output: { id: string; email: string; };
       };
     }>({
       binding: env.USERS_API,

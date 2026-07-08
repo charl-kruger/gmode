@@ -1,6 +1,6 @@
 import {
   GMODE_HEADERS,
-  signGatewayContext,
+  encodeGatewayContext,
   stripGModeHeaders,
   type FetcherLike,
   type GatewayContext,
@@ -17,7 +17,6 @@ export type ForwardInput<Env> = {
   serviceName: string;
   rewrittenUrl: URL;
   gatewayContext: GatewayContext;
-  signingSecret: string;
   context: GatewayRequestContext<Env>;
   extraHeaders?: HeadersInit;
   cache?: ForwardCachePolicy;
@@ -52,10 +51,7 @@ export async function forwardToService<Env>(
     });
   }
 
-  const token = await signGatewayContext(
-    input.gatewayContext,
-    input.signingSecret,
-  );
+  const token = encodeGatewayContext(input.gatewayContext);
   headers.set(GMODE_HEADERS.gatewayContext, token);
   headers.set(GMODE_HEADERS.requestId, input.gatewayContext.requestId);
 

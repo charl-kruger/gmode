@@ -87,51 +87,160 @@ export async function hmacVerify(
   );
 }
 
-export async function signGatewayContext(
-  context: GatewayContext,
-  secret: string,
-): Promise<string> {
-  const payload = base64urlEncodeString(JSON.stringify(context));
-  const signature = await hmacSign(secret, payload);
-  return `${payload}.${signature}`;
+export function encodeGatewayContext(context: GatewayContext): string {
+  return base64urlEncodeString(JSON.stringify(context));
 }
 
-export type VerifyGatewayContextOptions = {
+export type DecodeGatewayContextOptions = {
   audience: string;
   issuer?: "gmode-gateway";
   now?: number;
   clockSkewSeconds?: number;
 };
 
-export async function verifyGatewayContext(
+function invalidGatewayContext(message: string): ApiError {
+  return new ApiError({
+    code: "INVALID_GATEWAY_CONTEXT",
+    message,
+    status: 401,
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function readOptionalString(
+  input: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = input[key];
+  if (value === undefined) return undefined;
+  if (typeof value === "string") return value;
+  throw invalidGatewayContext(`Invalid gateway context ${key}`);
+}
+
+function parseGatewayUser(value: unknown): NonNullable<GatewayContext["user"]> {
+  if (!isRecord(value)) {
+    throw invalidGatewayContext("Invalid gateway context user");
+  }
+  const id = value["id"];
+  if (typeof id !== "string") {
+    throw invalidGatewayContext("Invalid gateway context user id");
+  }
+  const user: NonNullable<GatewayContext["user"]> = { id };
+  const email = readOptionalString(value, "email");
+  if (email !== undefined) user.email = email;
+  const name = readOptionalString(value, "name");
+  if (name !== undefined) user.name = name;
+  const claims = value["claims"];
+  if (claims !== undefined) {
+    if (!isRecord(claims)) {
+      throw invalidGatewayContext("Invalid gateway context user claims");
+    }
+    user.claims = claims;
+  }
+  return user;
+}
+
+function parseGatewayTenant(
+  value: unknown,
+): NonNullable<GatewayContext["tenant"]> {
+  if (!isRecord(value)) {
+    throw invalidGatewayContext("Invalid gateway context tenant");
+  }
+  const id = value["id"];
+  if (typeof id !== "string") {
+    throw invalidGatewayContext("Invalid gateway context tenant id");
+  }
+  const tenant: NonNullable<GatewayContext["tenant"]> = { id };
+  const slug = readOptionalString(value, "slug");
+  if (slug !== undefined) tenant.slug = slug;
+  return tenant;
+}
+
+function parseGatewayContextValue(value: unknown): GatewayContext {
+  if (!isRecord(value)) {
+    throw invalidGatewayContext("Invalid gateway context payload");
+  }
+
+  const iss = value["iss"];
+  const aud = value["aud"];
+  const requestId = value["requestId"];
+  const authenticated = value["authenticated"];
+  const scopes = value["scopes"];
+  const permissions = value["permissions"];
+  const issuedAt = value["issuedAt"];
+  const expiresAt = value["expiresAt"];
+
+  if (iss !== "gmode-gateway") {
+    throw invalidGatewayContext("Invalid gateway context issuer");
+  }
+  if (typeof aud !== "string") {
+    throw invalidGatewayContext("Invalid gateway context audience");
+  }
+  if (typeof requestId !== "string") {
+    throw invalidGatewayContext("Invalid gateway context request id");
+  }
+  if (typeof authenticated !== "boolean") {
+    throw invalidGatewayContext("Invalid gateway context authentication state");
+  }
+  if (!isStringArray(scopes)) {
+    throw invalidGatewayContext("Invalid gateway context scopes");
+  }
+  if (!isStringArray(permissions)) {
+    throw invalidGatewayContext("Invalid gateway context permissions");
+  }
+  if (typeof issuedAt !== "number" || !Number.isFinite(issuedAt)) {
+    throw invalidGatewayContext("Invalid gateway context issue time");
+  }
+  if (typeof expiresAt !== "number" || !Number.isFinite(expiresAt)) {
+    throw invalidGatewayContext("Invalid gateway context expiry");
+  }
+
+  const context: GatewayContext = {
+    iss,
+    aud,
+    requestId,
+    authenticated,
+    scopes,
+    permissions,
+    issuedAt,
+    expiresAt,
+  };
+
+  if (value["user"] !== undefined) {
+    context.user = parseGatewayUser(value["user"]);
+  }
+  if (value["tenant"] !== undefined) {
+    context.tenant = parseGatewayTenant(value["tenant"]);
+  }
+  if (value["flags"] !== undefined) {
+    if (!isRecord(value["flags"])) {
+      throw invalidGatewayContext("Invalid gateway context flags");
+    }
+    context.flags = value["flags"];
+  }
+
+  return context;
+}
+
+export function decodeGatewayContext(
   token: string,
-  secret: string,
-  options: VerifyGatewayContextOptions,
-): Promise<GatewayContext> {
-  const parts = token.split(".");
-  if (parts.length !== 2) {
-    throw new ApiError({
-      code: "INVALID_GATEWAY_CONTEXT",
-      message: "Invalid gateway context token",
-      status: 401,
-    });
-  }
-  const [payloadEncoded, signature] = parts as [string, string];
-
-  const valid = await hmacVerify(secret, payloadEncoded, signature);
-  if (!valid) {
-    throw new ApiError({
-      code: "INVALID_GATEWAY_CONTEXT",
-      message: "Invalid gateway context signature",
-      status: 401,
-    });
-  }
-
+  options: DecodeGatewayContextOptions,
+): GatewayContext {
   let parsed: GatewayContext;
   try {
-    const decoded = base64urlDecodeToString(payloadEncoded);
-    parsed = JSON.parse(decoded) as GatewayContext;
-  } catch {
+    const decoded = base64urlDecodeToString(token);
+    parsed = parseGatewayContextValue(JSON.parse(decoded));
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw err;
+    }
     throw new ApiError({
       code: "INVALID_GATEWAY_CONTEXT",
       message: "Invalid gateway context payload",

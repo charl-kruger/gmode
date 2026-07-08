@@ -56,7 +56,7 @@ export {
   paginated,
 } from "./response";
 
-export type { VerifyGatewayContextOptions } from "./crypto";
+export type { DecodeGatewayContextOptions } from "./crypto";
 export {
   base64urlEncode,
   base64urlEncodeString,
@@ -64,8 +64,8 @@ export {
   base64urlDecodeToString,
   hmacSign,
   hmacVerify,
-  signGatewayContext,
-  verifyGatewayContext,
+  encodeGatewayContext,
+  decodeGatewayContext,
 } from "./crypto";
 
 export { matchesScope, matchesAllScopes, isValidRequestId } from "./utils";

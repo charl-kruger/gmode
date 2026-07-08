@@ -1,8 +1,4 @@
-import type {
-  AuthContext,
-  EnvResolver,
-  FlagsClient,
-} from "@gmode/core";
+import type { AuthContext, FlagsClient } from "@gmode/core";
 
 export type { FetcherLike, GatewayContext } from "@gmode/core";
 
@@ -79,8 +75,7 @@ export type GatewayOptions<Env> = {
      */
     index?: string | null;
   };
-  internal: {
-    signingSecret: EnvResolver<Env, string>;
+  internal?: {
     tokenTtlSeconds?: number;
   };
   cache?: GatewayCacheOptions<Env>;
@@ -136,7 +131,6 @@ export interface GatewayVersion<Env> {
     name: string,
     config: GatewayServiceConfig<Env, Binding>,
   ): GatewayVersion<Env>;
-
 }
 
 export type ResolvedGatewayDefaults = {

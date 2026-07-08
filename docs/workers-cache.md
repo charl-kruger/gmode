@@ -11,9 +11,7 @@ gateway.
 ```ts
 const gateway = createGateway<Env>({
   name: "Example API",
-  version: "1.0.0",
-  internal: { signingSecret: (env) => env.INTERNAL_SIGNING_SECRET },
-  cache: {
+  version: "1.0.0",  cache: {
     enabled: true,
     default: {
       cacheControl: "public, max-age=60, stale-while-revalidate=300",

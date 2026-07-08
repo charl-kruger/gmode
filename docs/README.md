@@ -18,7 +18,7 @@ workflow page that matches the feature you are changing.
 
 ## 3. Gateway Policy
 
-- [Auth and security](./auth-and-security.md) - JWT, API keys, mTLS, and signed gateway context.
+- [Auth and security](./auth-and-security.md) - JWT, API keys, mTLS, and private gateway context.
 - [Idempotency](./idempotency.md) - KV-backed retry replay for unsafe requests.
 - [Feature flags](./feature-flags.md) - Cloudflare Flagship at the gateway and service layers.
 - [OpenFeature](./openfeature.md) - OpenFeature-style evaluation backed by Cloudflare Flagship.

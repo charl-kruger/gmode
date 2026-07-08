@@ -64,9 +64,9 @@ cp users-api/.dev.vars.example    users-api/.dev.vars
 cp billing-api/.dev.vars.example  billing-api/.dev.vars
 ```
 
-**Critical:** `INTERNAL_SIGNING_SECRET` must be identical across the gateway
-and every service it forwards to. The example `.dev.vars` files already use
-the same value; keep them in sync.
+The service Workers should stay private. The example configs use
+`workers_dev: false` and no public routes for `users-api` and `billing-api`;
+the gateway reaches them through Service Bindings.
 
 ### Start the services first (each in its own terminal)
 
@@ -149,7 +149,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 # expect: { id, total, currency, userId: "u1", userEmail: "u1@example.com" }
 ```
 
-### Inspect the signed context that reaches a service
+### Inspect the private context that reaches a service
 
 In a handler in `users-api/src/index.ts`, log it:
 
@@ -172,7 +172,7 @@ pre-evaluated flags.
 |---|---|---|
 | Service Bindings | ✅ | Auto-wired by name; both services must be running. |
 | JWT auth | ✅ | HS256 via Web Crypto; works identically to prod. |
-| Signed gateway context | ✅ | Pure HMAC-SHA256, no platform dependency. |
+| Private gateway context | ✅ | Encoded by the gateway and delivered over Service Bindings. |
 | Cloudflare native rate limiting | ⚠️ | Bindings simulated locally; counters reset per dev session and aren't shared across runs. Use `memoryRateLimit()` for deterministic tests. |
 | Cloudflare Flagship | ⚠️ | No documented offline mode. Either point at a real "dev" Flagship app, or stub the binding (see below). |
 | Workers Cache | ⚠️ | Gateway policy forwarding can be tested locally, but network cache behavior needs deployed Workers and `Cf-Cache-Status`. Keep the public gateway cache disabled and enable cache on downstream service Workers. |
@@ -214,8 +214,8 @@ or publishes packages to npm. Release-specific details live in
 - **`404 NOT_FOUND` on every path** — the path didn't match any
   `gateway.service({ mount })`. Check the mount strings; `/users` matches
   `/users` and `/users/123` but never `/users2`.
-- **`401 INVALID_GATEWAY_CONTEXT` from a service** — `INTERNAL_SIGNING_SECRET`
-  mismatches between gateway and that service. They must be byte-identical.
+- **`401 INVALID_GATEWAY_CONTEXT` from a service** — the gateway context
+  header is missing, malformed, expired, or not produced by the gateway path.
 - **`401 INVALID_GATEWAY_CONTEXT_AUDIENCE`** — the gateway's
   `service("foo", { audience: "users" })` doesn't match the service's
   `trustGateway: { audience: "users" }`.

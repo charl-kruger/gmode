@@ -9,12 +9,10 @@ import {
   type GatewayTelemetrySpan,
 } from "./middleware/telemetry";
 
-const SIGNING = "internal-signing-secret";
-
 function execCtx(): ExecutionContext {
   return {
-    waitUntil() {},
-    passThroughOnException() {},
+    waitUntil() { },
+    passThroughOnException() { },
   } as ExecutionContext;
 }
 
@@ -43,13 +41,11 @@ describe("gatewayTelemetry", () => {
     type Env = {
       USERS_API: FetcherLike;
       ANALYTICS: AnalyticsEngineDataset;
-      INTERNAL_SIGNING_SECRET: string;
     };
     const analytics = createAnalytics();
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(
       analyticsEngine<Env, "ANALYTICS">({
@@ -67,7 +63,6 @@ describe("gatewayTelemetry", () => {
       {
         USERS_API: mockFetcher(),
         ANALYTICS: analytics,
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
@@ -85,13 +80,11 @@ describe("gatewayTelemetry", () => {
   it("exports OTEL-compatible spans through explicit exporters", async () => {
     type Env = {
       USERS_API: FetcherLike;
-      INTERNAL_SIGNING_SECRET: string;
     };
     const spans: GatewayTelemetrySpan[] = [];
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(
       gatewayTelemetry<Env, never>({
@@ -110,7 +103,6 @@ describe("gatewayTelemetry", () => {
       new Request("https://api.test/users"),
       {
         USERS_API: mockFetcher(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );
@@ -131,12 +123,10 @@ describe("gatewayTelemetry", () => {
     type Env = {
       USERS_API: FetcherLike;
       ANALYTICS?: AnalyticsEngineDataset;
-      INTERNAL_SIGNING_SECRET: string;
     };
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(analyticsEngine<Env, "ANALYTICS">({ binding: "ANALYTICS" }));
     gateway.service("users", { mount: "/users", binding: "USERS_API" });
@@ -145,7 +135,6 @@ describe("gatewayTelemetry", () => {
       new Request("https://api.test/users"),
       {
         USERS_API: mockFetcher(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );

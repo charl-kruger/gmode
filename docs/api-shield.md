@@ -28,7 +28,7 @@ Pass a secret to HMAC-hash the value before it reaches Cloudflare dashboards.
 
 ```ts
 gateway.use(
-  sessionHeader({ secret: (env) => env.INTERNAL_SIGNING_SECRET }),
+  sessionHeader({ secret: (env) => env.SESSION_HEADER_SECRET }),
 );
 ```
 

@@ -13,9 +13,7 @@ const gateway = createGateway<Env>({
   docs: {
     openapi: "/openapi.json",
     swagger: "/docs",
-  },
-  internal: { signingSecret: (env) => env.INTERNAL_SIGNING_SECRET },
-});
+  },});
 ```
 
 `GET /docs` serves Swagger UI and points it at `/openapi.json`.
@@ -31,9 +29,7 @@ const gateway = createGateway<Env>({
   docs: {
     scalar: "/reference",
     ui: "scalar",
-  },
-  internal: { signingSecret: (env) => env.INTERNAL_SIGNING_SECRET },
-});
+  },});
 ```
 
 `GET /reference` serves Scalar and points it at `/openapi.json`. Swagger UI
@@ -49,9 +45,7 @@ const gateway = createGateway<Env>({
     swagger: "/swagger",
     scalar: "/docs",
     ui: "scalar",
-  },
-  internal: { signingSecret: (env) => env.INTERNAL_SIGNING_SECRET },
-});
+  },});
 ```
 
 The landing page marks whichever UI you set in `docs.ui` as the default docs

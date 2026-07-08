@@ -1,16 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { ApiError } from "@gmode/core";
+import { ApiError, encodeGatewayContext } from "@gmode/core";
 import { createMockRpcBinding } from "@gmode/testing";
 import { z } from "zod";
 import { createRpcClient } from "./client";
 import { createRpcService } from "./service";
 
-const SIGNING = "rpc-test-secret";
-
 function execCtx(): ExecutionContext {
   return {
-    waitUntil() {},
-    passThroughOnException() {},
+    waitUntil() { },
+    passThroughOnException() { },
   } as ExecutionContext;
 }
 
@@ -18,12 +16,12 @@ describe("createRpcClient", () => {
   it("unwraps ok envelopes into the data", async () => {
     const binding = createMockRpcBinding({
       async hello(envelope) {
-        const { name } = envelope.input as { name: string };
+        const { name } = envelope.input as { name: string; };
         return { ok: true, data: `hello ${name}` };
       },
     });
     type Methods = {
-      hello: { input: { name: string }; output: string };
+      hello: { input: { name: string; }; output: string; };
     };
     const client = createRpcClient<Methods>({ binding });
     const result = await client.hello({ name: "world" });
@@ -48,7 +46,7 @@ describe("createRpcClient", () => {
       },
     });
     const client = createRpcClient<{
-      hello: { input: unknown; output: unknown };
+      hello: { input: unknown; output: unknown; };
     }>({ binding });
     await expect(client.hello(null)).rejects.toBeInstanceOf(ApiError);
     try {
@@ -69,7 +67,7 @@ describe("createRpcClient", () => {
       },
     });
     const client = createRpcClient<{
-      hello: { input: null; output: string };
+      hello: { input: null; output: string; };
     }>({
       binding,
       context: "abc.def",
@@ -85,7 +83,7 @@ describe("createRpcClient", () => {
       },
     });
     const client = createRpcClient<{
-      hello: { input: null; output: string };
+      hello: { input: null; output: string; };
     }>({
       binding,
       context: () => {
@@ -99,11 +97,10 @@ describe("createRpcClient", () => {
   });
 
   it("end-to-end: service + client over a single in-process binding", async () => {
-    type Env = { INTERNAL_SIGNING_SECRET: string };
+    type Env = Record<string, never>;
     const service = createRpcService<Env>({
       name: "Users API",
       trustGateway: {
-        signingSecret: (e) => e.INTERNAL_SIGNING_SECRET,
         audience: "users",
       },
     }).method("getUserById", {
@@ -115,13 +112,13 @@ describe("createRpcClient", () => {
       }),
     });
 
-    const env: Env = { INTERNAL_SIGNING_SECRET: SIGNING };
+    const env: Env = {};
     const ctx = execCtx();
 
     // Bridge that mimics what defineEntrypoint does in production
     const binding = {
       async getUserById(envelope: {
-        input: { id: string };
+        input: { id: string; };
         context?: string;
       }) {
         return service.invoke(
@@ -130,40 +127,36 @@ describe("createRpcClient", () => {
           env,
           ctx,
         ) as Promise<
-          | { ok: true; data: { id: string; email: string } }
+          | { ok: true; data: { id: string; email: string; }; }
           | {
-              ok: false;
-              error: {
-                code: string;
-                message: string;
-                status: number;
-                details?: unknown;
-              };
-            }
+            ok: false;
+            error: {
+              code: string;
+              message: string;
+              status: number;
+              details?: unknown;
+            };
+          }
         >;
       },
     };
 
-    const { signGatewayContext } = await import("@gmode/core");
     const now = Math.floor(Date.now() / 1000);
-    const token = await signGatewayContext(
-      {
-        iss: "gmode-gateway",
-        aud: "users",
-        requestId: "req_e2e",
-        authenticated: true,
-        scopes: ["users:read"],
-        permissions: [],
-        issuedAt: now,
-        expiresAt: now + 60,
-      },
-      SIGNING,
-    );
+    const token = encodeGatewayContext({
+      iss: "gmode-gateway",
+      aud: "users",
+      requestId: "req_e2e",
+      authenticated: true,
+      scopes: ["users:read"],
+      permissions: [],
+      issuedAt: now,
+      expiresAt: now + 60,
+    });
 
     const client = createRpcClient<{
       getUserById: {
-        input: { id: string };
-        output: { id: string; email: string };
+        input: { id: string; };
+        output: { id: string; email: string; };
       };
     }>({
       binding,

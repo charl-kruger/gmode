@@ -9,12 +9,10 @@ import {
   type DurableObjectRateLimitStorage,
 } from "./middleware/durable-object-rate-limit";
 
-const SIGNING = "internal-signing-secret";
-
 function execCtx(): ExecutionContext {
   return {
-    waitUntil() {},
-    passThroughOnException() {},
+    waitUntil() { },
+    passThroughOnException() { },
   } as ExecutionContext;
 }
 
@@ -62,13 +60,11 @@ describe("durableObjectRateLimit", () => {
     type Env = {
       USERS_API: FetcherLike;
       LIMITER: DurableObjectRateLimiterNamespace;
-      INTERNAL_SIGNING_SECRET: string;
     };
     const limiter = createNamespace();
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     gateway.use(
@@ -85,7 +81,6 @@ describe("durableObjectRateLimit", () => {
     const env: Env = {
       USERS_API: mockFetcher(),
       LIMITER: limiter,
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
 
     const first = await gateway.fetch(
@@ -117,12 +112,10 @@ describe("durableObjectRateLimit", () => {
     type Env = {
       USERS_API: FetcherLike;
       LIMITER?: DurableObjectRateLimiterNamespace;
-      INTERNAL_SIGNING_SECRET: string;
     };
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(jsonErrors());
     gateway.use(
@@ -139,7 +132,6 @@ describe("durableObjectRateLimit", () => {
       new Request("https://api.test/users"),
       {
         USERS_API: mockFetcher(),
-        INTERNAL_SIGNING_SECRET: SIGNING,
       },
       execCtx(),
     );

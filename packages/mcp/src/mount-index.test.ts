@@ -47,7 +47,6 @@ function makeInternals<Env = unknown>(
       tokenTtlSeconds: 60,
       basePath: "",
     },
-    signingSecret: "test-secret",
   };
 }
 

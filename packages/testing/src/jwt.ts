@@ -1,7 +1,7 @@
 import {
   base64urlEncodeString,
+  encodeGatewayContext,
   hmacSign,
-  signGatewayContext,
   type GatewayContext,
 } from "@gmode/core";
 
@@ -32,10 +32,9 @@ export async function createTestJwt(
   return `${headerB64}.${payloadB64}.${signature}`;
 }
 
-export async function createTestGatewayContext(
-  context: Partial<GatewayContext> & { aud: string; requestId: string },
-  secret: string,
-): Promise<string> {
+export function createTestGatewayContext(
+  context: Partial<GatewayContext> & { aud: string; requestId: string; },
+): string {
   const now = Math.floor(Date.now() / 1000);
   const full: GatewayContext = {
     iss: "gmode-gateway",
@@ -46,7 +45,7 @@ export async function createTestGatewayContext(
     expiresAt: now + 60,
     ...context,
   };
-  return signGatewayContext(full, secret);
+  return encodeGatewayContext(full);
 }
 
 export { base64urlEncodeString } from "@gmode/core";

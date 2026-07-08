@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  verifyGatewayContext,
+  decodeGatewayContext,
   type FetcherLike,
   type FlagshipBinding,
 } from "@gmode/core";
@@ -10,12 +10,10 @@ import { requestId } from "./middleware/request-id";
 import { jsonErrors } from "./middleware/json-errors";
 import { featureFlags } from "./middleware/feature-flags";
 
-const SIGNING = "internal-signing-secret";
-
 function execCtx(): ExecutionContext {
   return {
-    waitUntil() {},
-    passThroughOnException() {},
+    waitUntil() { },
+    passThroughOnException() { },
   } as ExecutionContext;
 }
 
@@ -34,7 +32,6 @@ type Env = {
   USERS_API: FetcherLike;
   BILLING_API: FetcherLike;
   FLAGS: FlagshipBinding;
-  INTERNAL_SIGNING_SECRET: string;
 };
 
 describe("featureFlags middleware", () => {
@@ -44,7 +41,6 @@ describe("featureFlags middleware", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -63,7 +59,6 @@ describe("featureFlags middleware", () => {
       USERS_API: users,
       BILLING_API: mockFetcher(() => new Response("{}")),
       FLAGS: flags,
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/users/1"),
@@ -80,7 +75,6 @@ describe("featureFlags middleware", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -97,7 +91,6 @@ describe("featureFlags middleware", () => {
       USERS_API: mockFetcher(() => new Response("{}")),
       BILLING_API: billing,
       FLAGS: flags,
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/billing/invoices/1"),
@@ -113,7 +106,6 @@ describe("featureFlags middleware", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -130,7 +122,6 @@ describe("featureFlags middleware", () => {
       USERS_API: mockFetcher(() => new Response("{}")),
       BILLING_API: billing,
       FLAGS: flags,
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/billing/invoices/1"),
@@ -146,7 +137,6 @@ describe("featureFlags middleware", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -162,7 +152,6 @@ describe("featureFlags middleware", () => {
       USERS_API: mockFetcher(() => new Response("{}")),
       BILLING_API: mockFetcher(() => new Response("{}")),
       FLAGS: flags,
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/users/1"),
@@ -170,11 +159,11 @@ describe("featureFlags middleware", () => {
       execCtx(),
     );
     expect(res.status).toBe(503);
-    const body = (await res.json()) as { error: { code: string } };
+    const body = (await res.json()) as { error: { code: string; }; };
     expect(body.error.code).toBe("SERVICE_DISABLED");
   });
 
-  it("forwards pre-evaluated flags into the signed gateway context", async () => {
+  it("forwards pre-evaluated flags into the private gateway context", async () => {
     const flags = createMockFlagship({
       booleans: { "new-checkout": true },
       strings: { "tier": "gold" },
@@ -187,7 +176,6 @@ describe("featureFlags middleware", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -207,7 +195,6 @@ describe("featureFlags middleware", () => {
       USERS_API: users,
       BILLING_API: mockFetcher(() => new Response("{}")),
       FLAGS: flags,
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     await gateway.fetch(
       new Request("https://api.test/users/1"),
@@ -217,7 +204,7 @@ describe("featureFlags middleware", () => {
     const token = (captured as unknown as Request).headers.get(
       "x-gmode-context",
     )!;
-    const verified = await verifyGatewayContext(token, SIGNING, {
+    const verified = decodeGatewayContext(token, {
       audience: "users",
     });
     expect(verified.flags).toEqual({
@@ -261,7 +248,6 @@ describe("featureFlags middleware", () => {
     const gateway = createGateway<Env>({
       name: "T",
       version: "1.0.0",
-      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
     });
     gateway.use(requestId());
     gateway.use(jsonErrors());
@@ -277,7 +263,6 @@ describe("featureFlags middleware", () => {
       USERS_API: users,
       BILLING_API: mockFetcher(() => new Response("{}")),
       FLAGS: flags,
-      INTERNAL_SIGNING_SECRET: SIGNING,
     };
     const res = await gateway.fetch(
       new Request("https://api.test/users/1"),

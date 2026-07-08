@@ -145,7 +145,7 @@ function normalizeHandlerResponse(value: unknown): Response {
 
 function normalizeFeatureFlag(
   gate: FeatureFlagGate,
-): { key: string; default: boolean; behavior: "404" | "403" } {
+): { key: string; default: boolean; behavior: "404" | "403"; } {
   if (typeof gate === "string") {
     return { key: gate, default: false, behavior: "404" };
   }
@@ -243,9 +243,8 @@ export class ServiceImpl<Env> implements Service<Env> {
       const request = c.req.raw;
       const url = new URL(request.url);
 
-      const state = await verifyServiceGatewayContext({
+      const state = verifyServiceGatewayContext({
         request,
-        env: c.env as Env,
         options: this.options.trustGateway,
       });
 
@@ -269,21 +268,21 @@ export class ServiceImpl<Env> implements Service<Env> {
         ) as FlagshipBinding;
         const evalContext = this.options.flags.contextBuilder
           ? this.options.flags.contextBuilder({
-              gateway: gatewayContext,
-              env: c.env as Env,
-            })
+            gateway: gatewayContext,
+            env: c.env as Env,
+          })
           : buildFlagshipContext({
-              auth: {
-                authenticated: gatewayContext.authenticated,
-                ...(gatewayContext.user ? { user: gatewayContext.user } : {}),
-                ...(gatewayContext.tenant
-                  ? { tenant: gatewayContext.tenant }
-                  : {}),
-                scopes: gatewayContext.scopes,
-                permissions: gatewayContext.permissions,
-              },
-              requestId: gatewayContext.requestId,
-            });
+            auth: {
+              authenticated: gatewayContext.authenticated,
+              ...(gatewayContext.user ? { user: gatewayContext.user } : {}),
+              ...(gatewayContext.tenant
+                ? { tenant: gatewayContext.tenant }
+                : {}),
+              scopes: gatewayContext.scopes,
+              permissions: gatewayContext.permissions,
+            },
+            requestId: gatewayContext.requestId,
+          });
         flagsClient = createFlagsClient(binding, evalContext);
       }
 
@@ -302,25 +301,25 @@ export class ServiceImpl<Env> implements Service<Env> {
       const rawParams = c.req.param() as Record<string, string>;
       const params = config.params
         ? ((await parseSchema(config.params, rawParams)) as Record<
-            string,
-            string
-          >)
+          string,
+          string
+        >)
         : rawParams;
 
       const rawQuery = queryToObject(url);
       const query = config.query
         ? ((await parseSchema(config.query, rawQuery)) as Record<
-            string,
-            unknown
-          >)
+          string,
+          unknown
+        >)
         : (rawQuery as Record<string, unknown>);
 
       const rawHeaders = headersToObject(request.headers);
       const headers = config.headers
         ? ((await parseSchema(config.headers, rawHeaders)) as Record<
-            string,
-            unknown
-          >)
+          string,
+          unknown
+        >)
         : (rawHeaders as Record<string, unknown>);
 
       const rawBody = await readJsonBody(request, !!config.body);
