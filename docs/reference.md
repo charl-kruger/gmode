@@ -69,7 +69,7 @@ See [TESTING.md](../TESTING.md) for the broader local workflow.
 Not shipped yet:
 
 - Live-zone smoke automation.
-- Published `@gmode/*` packages.
+- First public npm release through the GitHub release workflow.
 
 ## Roadmap
 

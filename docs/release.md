@@ -1,23 +1,35 @@
 # Release Process
 
-GMode packages are published under the `@gmode` npm scope.
+GMode packages are published under the public `@gmode` npm scope from the
+GitHub `Release` workflow.
 
-## Versioning
+## Versioning Model
 
-Use synchronized package versions for the first public releases. All packages
-start at `0.1.0`; bump every package together until the API surface stabilizes.
+Changesets owns package versions. Public packages are configured as a fixed
+group while GMode is pre-1.0, so a release PR bumps the `@gmode/*` packages as
+a coherent set.
 
 Pre-1.0 compatibility policy:
 
 - Patch version: fixes, docs, tests, and additive internals.
-- Minor version: additive public APIs, new packages, or behavior gated behind
-  explicit options.
+- Minor version: additive public APIs, new packages, or deliberate behavior
+  changes behind explicit options.
 - Major version before `1.0.0`: breaking changes may still happen in minor
-  bumps, but must be called out in `CHANGELOG.md`.
+  bumps, but the changeset summary must call them out directly.
 
-## Preflight
+## Contributor Flow
 
-Run the full local release gate:
+Create a changeset for any public package change:
+
+```bash
+pnpm changeset
+```
+
+Select the affected packages and choose the semver bump. If the change is only
+docs, examples, tests, or internal CI wiring, do not create a changeset unless
+the package contents or consumer behavior changed.
+
+Run the local gate before opening a PR:
 
 ```bash
 pnpm install
@@ -27,15 +39,47 @@ pnpm build
 git diff --check
 ```
 
-Confirm the working tree is clean before publishing:
+## GitHub Flow
+
+The repository has two workflows:
+
+- `CI` runs on pushes to `main` and on pull requests.
+- `Release` runs on pushes to `main`, verifies the repo, then either opens a
+  Changesets version PR or publishes packages when the version PR is merged.
+
+When a feature PR with changesets lands on `main`, the release workflow opens
+or updates a version PR. Review the generated package versions and changelog
+entries, then merge that version PR to publish.
+
+## npm Setup
+
+Required repository secret:
+
+- `NPM_TOKEN` - npm automation token with publish access to the `@gmode` scope.
+
+The workflow uses `actions/setup-node` with the npm registry and passes
+`NODE_AUTH_TOKEN` to `pnpm publish`. Do not commit a project-level `.npmrc`
+with token placeholders.
+
+Published package metadata must keep:
+
+- `publishConfig.access: "public"` for every scoped package.
+- `repository.url: "git+https://github.com/charl-kruger/gmode.git"`.
+- `repository.directory` pointing at the package directory.
+
+The publish command is:
 
 ```bash
-git status --short
+pnpm publish-packages
 ```
+
+That runs recursive `pnpm publish` for unpublished `@gmode/*` versions with
+public access, provenance, and no git checks. Pnpm resolves workspace protocol
+dependencies during packing.
 
 ## Package Review
 
-Inspect the package tarballs before publishing:
+Inspect tarballs before the first public release or after any packaging change:
 
 ```bash
 for package in core service gateway rpc cli mcp testing; do
@@ -43,32 +87,9 @@ for package in core service gateway rpc cli mcp testing; do
 done
 ```
 
-Check that each tarball contains `dist`, package metadata, and no local test
-fixtures, generated temp output, secrets, or source-only workspace paths.
-
-## Publish
-
-Authenticate to npm as a user with access to the `gmode` org:
-
-```bash
-npm whoami
-```
-
-Publish packages in dependency order:
-
-```bash
-pnpm --filter @gmode/core publish --access public --no-git-checks
-pnpm --filter @gmode/testing publish --access public --no-git-checks
-pnpm --filter @gmode/service publish --access public --no-git-checks
-pnpm --filter @gmode/rpc publish --access public --no-git-checks
-pnpm --filter @gmode/gateway publish --access public --no-git-checks
-pnpm --filter @gmode/cli publish --access public --no-git-checks
-pnpm --filter @gmode/mcp publish --access public --no-git-checks
-```
-
-If any publish fails, stop and fix the package state. Do not continue with a
-partial release unless the failed package is independent of already-published
-packages and the changelog is updated accordingly.
+Each tarball should contain `dist`, package metadata, a package `README.md`,
+and no local test fixtures, generated temp output, secrets, or source-only
+workspace paths.
 
 ## Post-Publish
 
@@ -84,9 +105,5 @@ npm view @gmode/mcp version
 npm view @gmode/testing version
 ```
 
-Create and push a git tag:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
+If any publish step fails, fix the package or npm configuration and rerun the
+workflow. Do not manually continue a partial release from a different commit.

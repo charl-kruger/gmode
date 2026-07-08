@@ -4,18 +4,33 @@
   "private": true,
   "packageManager": "pnpm@11.7.0",
   "type": "module",
-  "description": "",
+  "description": "Typed gateway and service framework for Cloudflare Workers.",
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "publish-packages": "pnpm -r --filter '@gmode/*' publish --access public --provenance --no-git-checks --report-summary",
+    "release": "pnpm build && pnpm publish-packages"
   },
-  "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/charl-kruger/gmode.git"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "gateway",
+    "service-bindings",
+    "api"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@changesets/cli": "2.31.0",
     "@cloudflare/workers-types": "5.20260706.1",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",

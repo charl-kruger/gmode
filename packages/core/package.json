@@ -1,6 +1,15 @@
 {
   "name": "@gmode/core",
   "version": "0.1.0",
+  "description": "Shared GMode primitives for Cloudflare Workers gateway and service packages.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/charl-kruger/gmode.git",
+    "directory": "packages/core"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

@@ -1,6 +1,15 @@
 {
   "name": "@gmode/service",
   "version": "0.1.0",
+  "description": "Private service Worker runtime for GMode.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/charl-kruger/gmode.git",
+    "directory": "packages/service"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

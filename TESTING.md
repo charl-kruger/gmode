@@ -1,7 +1,8 @@
 # Testing GMode locally
 
-Two workflows: **unit/integration tests** (Vitest, no Cloudflare needed) and
-**end-to-end** (`wrangler dev`, multi-Worker, real Service Bindings).
+Three workflows: **unit/integration tests** (Vitest, no Cloudflare needed),
+**end-to-end** (`wrangler dev`, multi-Worker, real Service Bindings), and
+**GitHub CI** for pull requests and releases.
 
 The example app at `examples/gateway-basic/` is the reference setup —
 one Gateway Worker plus two Service Workers (`users-api`, `billing-api`).
@@ -10,7 +11,7 @@ one Gateway Worker plus two Service Workers (`users-api`, `billing-api`).
 
 ## 1. Unit + integration tests (Vitest)
 
-These run on plain Node 20+, no Wrangler, no Cloudflare account. They cover
+These run on plain Node 24 in CI, no Wrangler, no Cloudflare account. They cover
 the framework itself and the example handler logic.
 
 ```bash
@@ -174,6 +175,7 @@ pre-evaluated flags.
 | Signed gateway context | ✅ | Pure HMAC-SHA256, no platform dependency. |
 | Cloudflare native rate limiting | ⚠️ | Bindings simulated locally; counters reset per dev session and aren't shared across runs. Use `memoryRateLimit()` for deterministic tests. |
 | Cloudflare Flagship | ⚠️ | No documented offline mode. Either point at a real "dev" Flagship app, or stub the binding (see below). |
+| Workers Cache | ⚠️ | Gateway policy forwarding can be tested locally, but network cache behavior needs deployed Workers and `Cf-Cache-Status`. |
 | `WorkerEntrypoint` RPC | ✅ | Service Bindings are RPC + `fetch()` simultaneously when the target extends `WorkerEntrypoint`. `wrangler dev` auto-discovers — start both Workers, the caller's `env.USERS_API.getUserById(...)` just works. |
 | Workers Logs | n/a | Local logs go to stdout; the `observability.head_sampling_rate` only matters in prod. |
 | OpenAPI aggregation + `/docs` | ✅ | Gateway fetches each service's `/__gmode/openapi.json` over the Service Binding. |
@@ -190,7 +192,24 @@ For tests, use `createMockFlagship` from `@gmode/testing` — see
 
 ---
 
-## 4. Common failures
+## 4. GitHub CI and releases
+
+Pull requests and pushes to `main` run:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+The release workflow runs the same gate before it opens a Changesets version PR
+or publishes packages to npm. Release-specific details live in
+[docs/release.md](./docs/release.md).
+
+---
+
+## 5. Common failures
 
 - **`404 NOT_FOUND` on every path** — the path didn't match any
   `gateway.service({ mount })`. Check the mount strings; `/users` matches
@@ -213,7 +232,7 @@ For tests, use `createMockFlagship` from `@gmode/testing` — see
 
 ---
 
-## 5. Quick reference
+## 6. Quick reference
 
 ```bash
 # Everything green from a clean checkout

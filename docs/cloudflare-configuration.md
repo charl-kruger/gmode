@@ -60,8 +60,9 @@ gateway Worker when you want gateway responses cached before gateway code runs:
 ```
 
 Add the same block to each downstream service Worker that should store cached
-responses from inherited gateway policies. A gateway Worker cannot enable cache
-inside another Worker at runtime.
+responses from inherited gateway policies. Workers Cache is checked for service
+binding `fetch()` calls, but the cache belongs to the callee Worker. A gateway
+Worker cannot enable cache inside another Worker at runtime.
 
 Use `cache: false` for authenticated or tenant-sensitive services unless you
 have a deliberate cache-key strategy. See [Workers Cache](./workers-cache.md)
@@ -147,9 +148,22 @@ wrangler secret put INTERNAL_SIGNING_SECRET
 `INTERNAL_SIGNING_SECRET` must be identical across the gateway and every
 service that verifies gateway context. Do not put secrets in `vars`.
 
-Do not rely on a `secrets.required` block in `wrangler.jsonc` for validation;
-the runtime code fails when required secrets are missing, and production
-secrets should be set with `wrangler secret put`.
+Declare required secrets in each Worker config so Wrangler fails deployment
+when a required production secret is missing:
+
+```jsonc
+{
+  "secrets": {
+    "required": [
+      { "name": "JWT_SECRET" },
+      { "name": "INTERNAL_SIGNING_SECRET" }
+    ]
+  }
+}
+```
+
+Runtime code still fails fast if a secret is absent, but `secrets.required`
+catches the mistake before traffic reaches the Worker.
 
 ## Observability
 

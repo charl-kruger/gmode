@@ -4,6 +4,10 @@ GMode treats Workers Cache as a gateway-owned routing policy. Configure the
 policy once on `createGateway()`, then downstream service registrations inherit
 it unless they override or disable it.
 
+Cloudflare's cache remains per Worker. A cached downstream service response is
+stored by the service Worker, even though the policy decision is made by the
+gateway.
+
 ```ts
 const gateway = createGateway<Env>({
   name: "Example API",
@@ -34,8 +38,8 @@ gateway.service("billing", {
 ```
 
 For cacheable `GET` and `HEAD` requests, GMode forwards the inherited policy to
-the service binding as Cloudflare `cf.cacheControl`. A service can override the
-default:
+the service binding as Cloudflare `cf.cacheControl`; if configured, it also
+forwards a `cf.cacheKey`. A service can override the default:
 
 ```ts
 gateway.service("products", {
@@ -66,11 +70,17 @@ responses from inherited gateway policies. Wrangler configuration is per Worker;
 a gateway Worker cannot turn on caching inside a different service Worker at
 runtime.
 
+Workers Cache runs for service binding `fetch()` calls. On a downstream cache
+hit, the gateway still runs, but the service Worker is not invoked.
+
 ## Safety Rules
 
 - GMode only sends cache directives for `GET` and `HEAD`.
 - Authenticated services should opt out with `cache: false` unless the cache key
   is explicitly partitioned by identity and the response is safe to share.
+- Requests with `Authorization` and responses with `Set-Cookie` trigger
+  Cloudflare's normal cache bypass rules. Strip or normalize request headers
+  only when the gateway has already enforced the authorization boundary.
 - If a service sets `cache: true`, the gateway must have a default policy;
   otherwise GMode throws.
 - Purges are scoped to the Worker entrypoint that calls `ctx.cache.purge(...)`.

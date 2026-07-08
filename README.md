@@ -6,9 +6,9 @@ GMode keeps the public edge small: one Gateway Worker receives traffic, applies
 shared policy, signs internal context, and forwards to private Service Workers
 through Cloudflare Service Bindings.
 
-It intentionally does not include the old EdgeKit generated-service,
-public-client, runtime-loaded service, Worker Loader, or end-user code
-execution paths.
+The scope is intentionally narrow: GMode keeps the gateway/service runtime and
+does not carry over generated services, public clients, runtime-loaded workers,
+Worker Loader, or end-user code execution paths.
 
 ## Start Here
 
@@ -77,7 +77,7 @@ The CLI package is published as `@gmode/cli`; its command binary is `gmode`.
 | Send signed webhooks | [Webhooks](./docs/webhooks.md) |
 | Use API Shield schema validation, JWT, mTLS, sequences | [API Shield](./docs/api-shield.md) |
 | Call services with typed RPC | [Service-to-service RPC](./docs/rpc.md) |
-| Prepare an npm release | [Release process](./docs/release.md) |
+| Version and publish packages | [Release process](./docs/release.md) |
 | Expose the API to AI agents via MCP | [MCP server](./docs/mcp.md) |
 | Understand runtime contracts and roadmap | [Reference](./docs/reference.md) |
 
@@ -88,10 +88,12 @@ pnpm install
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm changeset
 ```
 
 ## Status
 
 The focused gateway/service path, RPC path, MCP path, Cloudflare binding
 helpers, and Cloudflare API Shield CLI path are implemented and covered by
-local tests.
+local tests. Releases are versioned with Changesets and published by the
+GitHub release workflow.
