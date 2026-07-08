@@ -139,6 +139,12 @@ Claude Desktop example:
 
 For local dev, use `http://127.0.0.1:8787/mcp`.
 
+When running the repository example locally, start the gateway with
+`pnpm dev -- --port 8787` from `examples/gateway-basic/gateway`. The example
+Wrangler config runs `pnpm build:deps` first, so local `@gmode/gateway` and
+`@gmode/mcp` workspace packages have their `dist` exports before Wrangler
+bundles the Worker.
+
 ## Manual Smoke
 
 ```bash

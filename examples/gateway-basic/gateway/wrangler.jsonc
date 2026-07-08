@@ -20,6 +20,15 @@
       "service": "gmode-example-billing-api",
     },
   ],
+  "build": {
+    "command": "pnpm build:deps",
+    "watch_dir": [
+      "src",
+      "../../../packages/core/src",
+      "../../../packages/gateway/src",
+      "../../../packages/mcp/src",
+    ],
+  },
   "ratelimits": [
     {
       "name": "API_RATE_LIMITER",

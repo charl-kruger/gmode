@@ -11,14 +11,18 @@ typically run each one in its own terminal:
 
 ```bash
 # Terminal 1
-cd users-api && cp .dev.vars.example .dev.vars && pnpm exec wrangler dev
+cd users-api && cp .dev.vars.example .dev.vars && pnpm dev
 
 # Terminal 2
-cd billing-api && cp .dev.vars.example .dev.vars && pnpm exec wrangler dev
+cd billing-api && cp .dev.vars.example .dev.vars && pnpm dev
 
 # Terminal 3
-cd gateway && cp .dev.vars.example .dev.vars && pnpm exec wrangler dev
+cd gateway && cp .dev.vars.example .dev.vars && pnpm dev
 ```
+
+The example `wrangler.jsonc` files run `pnpm build:deps` before Wrangler
+bundles each Worker. That builds the local `@gmode/*` workspace packages so
+Wrangler can resolve their published `dist` exports.
 
 Then hit the gateway:
 
@@ -34,11 +38,11 @@ services are private Workers reached through Service Bindings, so they do not
 need an internal signing secret:
 
 ```bash
-cd users-api && wrangler deploy
-cd ../billing-api && wrangler deploy
+cd users-api && pnpm run deploy
+cd ../billing-api && pnpm run deploy
 cd ../gateway
 wrangler secret put JWT_SECRET
-wrangler deploy
+pnpm run deploy
 ```
 
 Keep `workers_dev: false` and do not add public routes to downstream services

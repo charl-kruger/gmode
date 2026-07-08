@@ -73,11 +73,11 @@ the gateway reaches them through Service Bindings.
 ```bash
 # Terminal A
 cd examples/gateway-basic/users-api
-pnpm exec wrangler dev --port 8788
+pnpm dev -- --port 8788
 
 # Terminal B
 cd examples/gateway-basic/billing-api
-pnpm exec wrangler dev --port 8789
+pnpm dev -- --port 8789
 ```
 
 You should see something like:
@@ -93,7 +93,7 @@ You should see something like:
 ```bash
 # Terminal C
 cd examples/gateway-basic/gateway
-pnpm exec wrangler dev --port 8787
+pnpm dev -- --port 8787
 ```
 
 The gateway's `services: [{ binding: "USERS_API", service: "gmode-example-users-api" }, ...]`
@@ -239,7 +239,7 @@ or publishes packages to npm. Release-specific details live in
 pnpm install && pnpm build && pnpm typecheck && pnpm test
 
 # Local E2E
-(cd examples/gateway-basic/users-api   && pnpm exec wrangler dev --port 8788) &
-(cd examples/gateway-basic/billing-api && pnpm exec wrangler dev --port 8789) &
-(cd examples/gateway-basic/gateway     && pnpm exec wrangler dev --port 8787)
+(cd examples/gateway-basic/users-api   && pnpm dev -- --port 8788) &
+(cd examples/gateway-basic/billing-api && pnpm dev -- --port 8789) &
+(cd examples/gateway-basic/gateway     && pnpm dev -- --port 8787)
 ```

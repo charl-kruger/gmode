@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:deps": "../../../node_modules/.bin/turbo run build --filter=@gmode/core --filter=@gmode/rpc --filter=@gmode/service",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "pretypecheck": "pnpm build:deps",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -4,6 +4,15 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-05-18",
   "workers_dev": false,
+  "build": {
+    "command": "pnpm build:deps",
+    "watch_dir": [
+      "src",
+      "../../../packages/core/src",
+      "../../../packages/rpc/src",
+      "../../../packages/service/src",
+    ],
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
