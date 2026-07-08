@@ -41,7 +41,7 @@
     "head_sampling_rate": 1,
   },
   "cache": {
-    "enabled": true,
+    "enabled": false,
   },
   "secrets": {
     "required": ["JWT_SECRET", "INTERNAL_SIGNING_SECRET"],

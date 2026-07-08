@@ -50,8 +50,18 @@ gateway.service("billing", {
 });
 ```
 
-Cloudflare still enables cache per Worker. In `wrangler.jsonc`, add this to the
-gateway Worker when you want gateway responses cached before gateway code runs:
+Cloudflare still enables cache per Worker. In the common GMode layout, keep the
+public gateway Worker uncached so auth, rate limits, and routing run on every
+request:
+
+```jsonc
+{
+  "cache": { "enabled": false }
+}
+```
+
+Then enable Workers Cache on each downstream service Worker that should store
+cached responses from inherited gateway policies:
 
 ```jsonc
 {
@@ -59,10 +69,9 @@ gateway Worker when you want gateway responses cached before gateway code runs:
 }
 ```
 
-Add the same block to each downstream service Worker that should store cached
-responses from inherited gateway policies. Workers Cache is checked for service
-binding `fetch()` calls, but the cache belongs to the callee Worker. A gateway
-Worker cannot enable cache inside another Worker at runtime.
+Workers Cache is checked for service binding `fetch()` calls, but the cache
+belongs to the callee Worker. A gateway Worker cannot enable cache inside
+another Worker at runtime.
 
 Use `cache: false` for authenticated or tenant-sensitive services unless you
 have a deliberate cache-key strategy. See [Workers Cache](./workers-cache.md)

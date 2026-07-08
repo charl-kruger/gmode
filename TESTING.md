@@ -175,7 +175,7 @@ pre-evaluated flags.
 | Signed gateway context | ✅ | Pure HMAC-SHA256, no platform dependency. |
 | Cloudflare native rate limiting | ⚠️ | Bindings simulated locally; counters reset per dev session and aren't shared across runs. Use `memoryRateLimit()` for deterministic tests. |
 | Cloudflare Flagship | ⚠️ | No documented offline mode. Either point at a real "dev" Flagship app, or stub the binding (see below). |
-| Workers Cache | ⚠️ | Gateway policy forwarding can be tested locally, but network cache behavior needs deployed Workers and `Cf-Cache-Status`. |
+| Workers Cache | ⚠️ | Gateway policy forwarding can be tested locally, but network cache behavior needs deployed Workers and `Cf-Cache-Status`. Keep the public gateway cache disabled and enable cache on downstream service Workers. |
 | `WorkerEntrypoint` RPC | ✅ | Service Bindings are RPC + `fetch()` simultaneously when the target extends `WorkerEntrypoint`. `wrangler dev` auto-discovers — start both Workers, the caller's `env.USERS_API.getUserById(...)` just works. |
 | Workers Logs | n/a | Local logs go to stdout; the `observability.head_sampling_rate` only matters in prod. |
 | OpenAPI aggregation + `/docs` | ✅ | Gateway fetches each service's `/__gmode/openapi.json` over the Service Binding. |

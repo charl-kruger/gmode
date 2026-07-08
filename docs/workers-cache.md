@@ -55,9 +55,18 @@ gateway.service("products", {
 
 ## Cloudflare Configuration
 
-GMode owns the policy, but Cloudflare owns the cache. Enable Workers Cache in
-`wrangler.jsonc` for the gateway if you want gateway responses cached before
-gateway code runs:
+GMode owns the policy, but Cloudflare owns the cache. Keep the public gateway
+Worker uncached unless you explicitly want Cloudflare to serve gateway
+responses before gateway code runs:
+
+```jsonc
+{
+  "cache": { "enabled": false }
+}
+```
+
+Enable Workers Cache on each downstream service Worker that should store
+responses from inherited gateway policies:
 
 ```jsonc
 {
@@ -65,10 +74,8 @@ gateway code runs:
 }
 ```
 
-Enable the same block on each downstream service Worker that should store
-responses from inherited gateway policies. Wrangler configuration is per Worker;
-a gateway Worker cannot turn on caching inside a different service Worker at
-runtime.
+Wrangler configuration is per Worker; a gateway Worker cannot turn on caching
+inside a different service Worker at runtime.
 
 Workers Cache runs for service binding `fetch()` calls. On a downstream cache
 hit, the gateway still runs, but the service Worker is not invoked.
