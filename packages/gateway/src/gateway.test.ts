@@ -14,12 +14,24 @@ import { idempotency } from "./middleware/idempotency";
 
 const SIGNING = "internal-signing-secret";
 
+type FetcherCall = {
+  request: Request;
+  init: RequestInit<RequestInitCfProperties> | undefined;
+};
+
 function mockFetcher(handler: (req: Request) => Response | Promise<Response>) {
   const calls: Request[] = [];
-  const fetcher: FetcherLike & { calls: Request[] } = {
+  const fetchCalls: FetcherCall[] = [];
+  const fetcher: FetcherLike & {
+    calls: Request[];
+    fetchCalls: FetcherCall[];
+  } = {
     calls,
-    async fetch(req) {
+    fetchCalls,
+    async fetch(input, init) {
+      const req = input instanceof Request ? input : new Request(input);
       calls.push(req);
+      fetchCalls.push({ request: req, init });
       return handler(req);
     },
   };
@@ -119,6 +131,183 @@ describe("gateway", () => {
     const body = (await res.json()) as { path: string };
     expect(body.path).toBe("/123");
     expect(users.calls).toHaveLength(1);
+  });
+
+  it("passes inherited gateway cache policy to downstream services", async () => {
+    const users = mockFetcher(() => Response.json({ ok: true }));
+    const gateway = createGateway<Env>({
+      name: "T",
+      version: "1.0.0",
+      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
+      cache: {
+        enabled: true,
+        default: {
+          cacheControl: "public, max-age=60, stale-while-revalidate=300",
+        },
+      },
+    });
+    gateway.service("users", {
+      mount: "/users",
+      binding: "USERS_API",
+      audience: "users",
+      auth: false,
+    });
+
+    const res = await gateway.fetch(
+      new Request("https://api.test/users/123"),
+      {
+        USERS_API: users,
+        RL: mockRateLimit(),
+        INTERNAL_SIGNING_SECRET: SIGNING,
+      },
+      execCtx(),
+    );
+
+    expect(res.status).toBe(200);
+    expect(users.fetchCalls).toHaveLength(1);
+    expect(users.fetchCalls[0]!.init?.cf?.cacheControl).toBe(
+      "public, max-age=60, stale-while-revalidate=300",
+    );
+  });
+
+  it("lets a service override inherited cache policy and cache key", async () => {
+    const users = mockFetcher(() => Response.json({ ok: true }));
+    const gateway = createGateway<Env>({
+      name: "T",
+      version: "1.0.0",
+      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
+      cache: {
+        enabled: true,
+        default: {
+          cacheControl: "public, max-age=30",
+        },
+      },
+    });
+    gateway.service("users", {
+      mount: "/users",
+      binding: "USERS_API",
+      audience: "users",
+      auth: false,
+      cache: {
+        cacheControl: "public, max-age=300",
+        cacheKey: (ctx) => `users:${ctx.url.pathname}`,
+      },
+    });
+
+    await gateway.fetch(
+      new Request("https://api.test/users/123"),
+      {
+        USERS_API: users,
+        RL: mockRateLimit(),
+        INTERNAL_SIGNING_SECRET: SIGNING,
+      },
+      execCtx(),
+    );
+
+    expect(users.fetchCalls[0]!.init?.cf?.cacheControl).toBe(
+      "public, max-age=300",
+    );
+    expect(users.fetchCalls[0]!.init?.cf?.cacheKey).toBe("users:/users/123");
+  });
+
+  it("lets services opt out of gateway cache inheritance", async () => {
+    const users = mockFetcher(() => Response.json({ ok: true }));
+    const gateway = createGateway<Env>({
+      name: "T",
+      version: "1.0.0",
+      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
+      cache: {
+        enabled: true,
+        default: {
+          cacheControl: "public, max-age=60",
+        },
+      },
+    });
+    gateway.service("users", {
+      mount: "/users",
+      binding: "USERS_API",
+      audience: "users",
+      auth: false,
+      cache: false,
+    });
+
+    await gateway.fetch(
+      new Request("https://api.test/users/123"),
+      {
+        USERS_API: users,
+        RL: mockRateLimit(),
+        INTERNAL_SIGNING_SECRET: SIGNING,
+      },
+      execCtx(),
+    );
+
+    expect(users.fetchCalls[0]!.init).toBeUndefined();
+  });
+
+  it("fails when a service requests cache inheritance without a gateway default", async () => {
+    const users = mockFetcher(() => Response.json({ ok: true }));
+    const gateway = createGateway<Env>({
+      name: "T",
+      version: "1.0.0",
+      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
+      cache: { enabled: true },
+    });
+    gateway.service("users", {
+      mount: "/users",
+      binding: "USERS_API",
+      audience: "users",
+      auth: false,
+      cache: true,
+    });
+
+    const res = await gateway.fetch(
+      new Request("https://api.test/users/123"),
+      {
+        USERS_API: users,
+        RL: mockRateLimit(),
+        INTERNAL_SIGNING_SECRET: SIGNING,
+      },
+      execCtx(),
+    );
+
+    expect(res.status).toBe(500);
+    expect(users.fetchCalls).toHaveLength(0);
+  });
+
+  it("does not pass downstream cache policy for non-GET requests", async () => {
+    const users = mockFetcher(() => Response.json({ ok: true }));
+    const gateway = createGateway<Env>({
+      name: "T",
+      version: "1.0.0",
+      internal: { signingSecret: (e) => e.INTERNAL_SIGNING_SECRET },
+      cache: {
+        enabled: true,
+        default: {
+          cacheControl: "public, max-age=60",
+        },
+      },
+    });
+    gateway.service("users", {
+      mount: "/users",
+      binding: "USERS_API",
+      audience: "users",
+      auth: false,
+    });
+
+    await gateway.fetch(
+      new Request("https://api.test/users", {
+        method: "POST",
+        body: JSON.stringify({ name: "A" }),
+      }),
+      {
+        USERS_API: users,
+        RL: mockRateLimit(),
+        INTERNAL_SIGNING_SECRET: SIGNING,
+      },
+      execCtx(),
+    );
+
+    expect(users.fetchCalls[0]!.init).toBeUndefined();
   });
 
   it("strips client-supplied x-gmode-* headers and signs context", async () => {

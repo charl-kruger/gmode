@@ -13,6 +13,7 @@ then move to the integration-specific pages when you need them.
 - [Idempotency](./idempotency.md) - KV-backed retry replay for unsafe requests.
 - [Durable Object rate limiting](./durable-object-rate-limiting.md) - globally coordinated tenant/user/API-key quotas.
 - [Feature flags](./feature-flags.md) - Cloudflare Flagship at the gateway and service layers.
+- [Workers Cache](./workers-cache.md) - gateway-owned downstream cache policy for Cloudflare Workers Cache.
 - [OpenFeature](./openfeature.md) - OpenFeature-style provider backed by Cloudflare Flagship.
 - [Telemetry](./telemetry.md) - Analytics Engine request events and OTEL exporter hooks.
 - [API versioning](./api-versioning.md) - mount `/v1` and `/v2` services side by side with deprecation headers and OpenAPI metadata.

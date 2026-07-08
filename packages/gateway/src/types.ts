@@ -6,6 +6,23 @@ import type {
 
 export type { FetcherLike, GatewayContext } from "@gmode/core";
 
+export type GatewayCacheMethod = "GET" | "HEAD";
+
+export type GatewayCacheResolver<Env, T> =
+  | T
+  | ((context: GatewayRequestContext<Env>) => T);
+
+export type GatewayDownstreamCachePolicy<Env> = {
+  cacheControl: GatewayCacheResolver<Env, string>;
+  cacheKey?: GatewayCacheResolver<Env, string | undefined>;
+  methods?: readonly GatewayCacheMethod[];
+};
+
+export type GatewayCacheOptions<Env> = {
+  enabled: boolean;
+  default?: GatewayDownstreamCachePolicy<Env>;
+};
+
 export type GatewayServiceConfig<Env, Binding extends keyof Env & string> = {
   mount: `/${string}`;
   binding: Binding;
@@ -20,6 +37,7 @@ export type GatewayServiceConfig<Env, Binding extends keyof Env & string> = {
         path?: string;
       };
   headers?: Record<string, string>;
+  cache?: boolean | GatewayDownstreamCachePolicy<Env>;
 };
 
 export type GatewayApiVersionDeprecation = {
@@ -65,6 +83,7 @@ export type GatewayOptions<Env> = {
     signingSecret: EnvResolver<Env, string>;
     tokenTtlSeconds?: number;
   };
+  cache?: GatewayCacheOptions<Env>;
   defaults?: {
     auth?: boolean;
     scopes?: string[];

@@ -30,6 +30,12 @@ const gateway = createGateway<Env>({
   internal: {
     signingSecret: (env) => env.INTERNAL_SIGNING_SECRET,
   },
+  cache: {
+    enabled: true,
+    default: {
+      cacheControl: "public, max-age=60, stale-while-revalidate=300",
+    },
+  },
 });
 
 gateway.use(requestId());
@@ -89,6 +95,7 @@ gateway.service("billing", {
   audience: "billing",
   auth: true,
   scopes: ["billing:*"],
+  cache: false,
   openapi: true,
 });
 

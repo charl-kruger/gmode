@@ -131,7 +131,10 @@ export type FlagshipBinding = {
 };
 
 export type FetcherLike = {
-  fetch(request: Request): Promise<Response>;
+  fetch(
+    input: RequestInfo | URL,
+    init?: RequestInit<RequestInitCfProperties>,
+  ): Promise<Response>;
 };
 
 export function resolveEnvValue<Env, T>(

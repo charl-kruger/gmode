@@ -15,6 +15,58 @@ Bindings. In the gateway `wrangler.jsonc`:
 
 The binding name must match the `binding` used in `gateway.service(...)`.
 
+## Workers Cache
+
+GMode configures downstream cache policy at the gateway. The gateway resolves
+the matching service registration, inherits or overrides the configured policy,
+and forwards it to the service binding as Cloudflare `cf.cacheControl` for
+`GET` and `HEAD` requests.
+
+```ts
+const gateway = createGateway<Env>({
+  name: "Example API",
+  version: "1.0.0",
+  internal: { signingSecret: (env) => env.INTERNAL_SIGNING_SECRET },
+  cache: {
+    enabled: true,
+    default: {
+      cacheControl: "public, max-age=60, stale-while-revalidate=300",
+    },
+  },
+});
+
+gateway.service("users", {
+  mount: "/users",
+  binding: "USERS_API",
+  audience: "users",
+});
+
+gateway.service("billing", {
+  mount: "/billing",
+  binding: "BILLING_API",
+  audience: "billing",
+  auth: true,
+  cache: false,
+});
+```
+
+Cloudflare still enables cache per Worker. In `wrangler.jsonc`, add this to the
+gateway Worker when you want gateway responses cached before gateway code runs:
+
+```jsonc
+{
+  "cache": { "enabled": true }
+}
+```
+
+Add the same block to each downstream service Worker that should store cached
+responses from inherited gateway policies. A gateway Worker cannot enable cache
+inside another Worker at runtime.
+
+Use `cache: false` for authenticated or tenant-sensitive services unless you
+have a deliberate cache-key strategy. See [Workers Cache](./workers-cache.md)
+for the runtime rules and purge constraints.
+
 ## Native Cloudflare Rate Limiting
 
 In the gateway `wrangler.jsonc`:

@@ -36,7 +36,10 @@ import {
   matchService,
   validateMount,
 } from "./route-matcher";
+import type { ForwardCachePolicy } from "./forward";
 import type {
+  GatewayCacheMethod,
+  GatewayDownstreamCachePolicy,
   GatewayApiVersion,
   Gateway,
   GatewayInternals,
@@ -48,6 +51,8 @@ import type {
   GatewayVersion,
   ResolvedGatewayDefaults,
 } from "./types";
+
+const CACHEABLE_METHODS: readonly GatewayCacheMethod[] = ["GET", "HEAD"];
 
 function buildDefaults<Env>(
   options: GatewayOptions<Env>,
@@ -174,6 +179,87 @@ function withExtraHeaders(response: Response, extra: HeadersInit | undefined): R
     statusText: response.statusText,
     headers,
   });
+}
+
+function resolveGatewayCacheValue<Env, T>(
+  value: T | ((context: GatewayRequestContext<Env>) => T),
+  context: GatewayRequestContext<Env>,
+): T {
+  if (typeof value === "function") {
+    return (value as (context: GatewayRequestContext<Env>) => T)(context);
+  }
+  return value;
+}
+
+function mergeCachePolicy<Env>(
+  base: GatewayDownstreamCachePolicy<Env> | undefined,
+  override: GatewayDownstreamCachePolicy<Env> | undefined,
+): GatewayDownstreamCachePolicy<Env> | undefined {
+  if (!base) return override;
+  if (!override) return base;
+  const methods = override.methods ?? base.methods;
+  const merged = {
+    ...base,
+    ...override,
+  };
+  if (!methods) return merged;
+  return {
+    ...merged,
+    methods,
+  };
+}
+
+function resolveDownstreamCachePolicy<Env>(
+  context: GatewayRequestContext<Env>,
+  internals: GatewayInternals<Env>,
+  service: GatewayServiceEntry<Env>,
+): ForwardCachePolicy | undefined {
+  const options = internals.options.cache;
+  if (!options?.enabled) return undefined;
+
+  const method = context.request.method.toUpperCase();
+  if (method !== "GET" && method !== "HEAD") return undefined;
+
+  const serviceCache = service.config.cache;
+  if (serviceCache === false) return undefined;
+
+  const defaultPolicy = options.default;
+  let policy: GatewayDownstreamCachePolicy<Env> | undefined;
+  if (serviceCache === true) {
+    if (!defaultPolicy) {
+      throw new Error(
+        `Service "${service.name}" enables cache inheritance but the gateway has no default cache policy`,
+      );
+    }
+    policy = defaultPolicy;
+  } else if (serviceCache && typeof serviceCache === "object") {
+    policy = mergeCachePolicy(defaultPolicy, serviceCache);
+  } else {
+    policy = defaultPolicy;
+  }
+
+  if (!policy) return undefined;
+
+  const allowedMethods = policy.methods ?? CACHEABLE_METHODS;
+  if (!allowedMethods.includes(method as GatewayCacheMethod)) {
+    return undefined;
+  }
+
+  const cacheControl = resolveGatewayCacheValue(
+    policy.cacheControl,
+    context,
+  ).trim();
+  if (!cacheControl) {
+    throw new Error(`Service "${service.name}" resolved an empty cache policy`);
+  }
+
+  const cacheKey = policy.cacheKey
+    ? resolveGatewayCacheValue(policy.cacheKey, context)
+    : undefined;
+
+  return cacheKey !== undefined
+    ? { cacheControl, cacheKey }
+    : { cacheControl };
 }
 
 async function handleRequest<Env>(
@@ -389,6 +475,7 @@ async function route<Env>(
     internals.options.internal.signingSecret,
     context.env,
   );
+  const cache = resolveDownstreamCachePolicy(context, internals, match.service);
 
   const response = await forwardToService({
     request: context.request,
@@ -399,6 +486,7 @@ async function route<Env>(
     gatewayContext,
     signingSecret,
     context,
+    ...(cache ? { cache } : {}),
   });
   return withExtraHeaders(response, deprecationHeaders(match.service.apiVersion));
 }

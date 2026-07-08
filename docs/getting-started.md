@@ -33,6 +33,12 @@ const gateway = createGateway<Env>({
   name: "Example API",
   version: "1.0.0",
   internal: { signingSecret: (env) => env.INTERNAL_SIGNING_SECRET },
+  cache: {
+    enabled: true,
+    default: {
+      cacheControl: "public, max-age=60, stale-while-revalidate=300",
+    },
+  },
 });
 
 gateway.use(requestId());
@@ -142,6 +148,7 @@ service.post("/standard", {
 | mTLS at the edge | `mtls()` |
 | Feature flags and rollouts | `featureFlags()` |
 | API Shield Sequence Analytics session ID | `sessionHeader()` |
+| Gateway-owned Workers Cache policy | `cache` on `createGateway()` and `gateway.service()` |
 | Retry-safe writes | `idempotency()` |
 | Expose every API operation to AI agents | `mountMcp()` from `@gmode/mcp` |
 | Service-to-service RPC | `defineEntrypoint()` from `@gmode/rpc` |
@@ -149,7 +156,7 @@ service.post("/standard", {
 
 ## Next Steps
 
-- Configure bindings, secrets, rate limits, and observability in [Cloudflare configuration](./cloudflare-configuration.md).
+- Configure bindings, secrets, rate limits, cache, and observability in [Cloudflare configuration](./cloudflare-configuration.md).
 - Add authentication and gateway trust in [Auth and security](./auth-and-security.md).
 - Expose the gateway to MCP-compatible clients in [MCP server](./mcp.md).
 - Run the local example from [TESTING.md](../TESTING.md).

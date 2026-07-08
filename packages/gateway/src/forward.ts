@@ -20,6 +20,12 @@ export type ForwardInput<Env> = {
   signingSecret: string;
   context: GatewayRequestContext<Env>;
   extraHeaders?: HeadersInit;
+  cache?: ForwardCachePolicy;
+};
+
+export type ForwardCachePolicy = {
+  cacheControl: string;
+  cacheKey?: string;
 };
 
 function isFetcherLike(value: unknown): value is FetcherLike {
@@ -90,5 +96,15 @@ export async function forwardToService<Env>(
       `Service binding "${input.service.binding}" is not configured`,
     );
   }
+  if (input.cache) {
+    const cf: RequestInitCfProperties = {
+      cacheControl: input.cache.cacheControl,
+    };
+    if (input.cache.cacheKey !== undefined) {
+      cf.cacheKey = input.cache.cacheKey;
+    }
+    return binding.fetch(internalRequest, { cf });
+  }
+
   return binding.fetch(internalRequest);
 }
