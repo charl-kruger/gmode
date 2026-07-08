@@ -31,6 +31,19 @@ curl http://127.0.0.1:8787/users/123
 curl http://127.0.0.1:8787/openapi.json
 ```
 
+## MCP Inspector
+
+The gateway exposes MCP at `http://127.0.0.1:8787/mcp` using Streamable HTTP.
+When running `npx @modelcontextprotocol/inspector`, select:
+
+| Field | Value |
+|---|---|
+| Transport Type | `Streamable HTTP` |
+| URL | `http://127.0.0.1:8787/mcp` |
+
+Do not select `SSE`; the inspector still offers it for older servers, but this
+example does not expose a legacy SSE session endpoint.
+
 ## Deploy
 
 Deploy each Worker with services first and the gateway last. The downstream

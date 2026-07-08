@@ -139,6 +139,21 @@ Claude Desktop example:
 
 For local dev, use `http://127.0.0.1:8787/mcp`.
 
+### MCP Inspector
+
+`@gmode/mcp` supports the MCP Streamable HTTP transport. In the inspector UI,
+choose:
+
+| Field | Value |
+|---|---|
+| Transport Type | `Streamable HTTP` |
+| URL | `http://127.0.0.1:8787/mcp` |
+
+Do not choose `SSE`. The inspector still exposes that legacy transport, but
+GMode does not serve an SSE session endpoint. If the inspector logs
+`SSE transport` or `Does the MCP server support SSE?`, switch the transport
+type to `Streamable HTTP`.
+
 When running the repository example locally, start the gateway with
 `pnpm dev -- --port 8787` from `examples/gateway-basic/gateway`. The example
 Wrangler config runs `pnpm build:deps` first, so local `@gmode/gateway` and

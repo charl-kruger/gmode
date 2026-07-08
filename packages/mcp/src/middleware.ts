@@ -35,6 +35,26 @@ function matchesPath(pathname: string, mcpPath: string): boolean {
   return false;
 }
 
+function unsupportedTransportResponse(path: string): Response {
+  return new Response(
+    JSON.stringify({
+      error:
+        "This MCP endpoint supports Streamable HTTP over POST. Legacy SSE transport is not supported.",
+      transport: "streamable-http",
+      method: "POST",
+      path,
+    }),
+    {
+      status: 405,
+      headers: {
+        allow: "POST",
+        "content-type": "application/json; charset=utf-8",
+        "x-gmode-mcp-transport": "streamable-http",
+      },
+    },
+  );
+}
+
 /**
  * Gateway middleware that exposes every aggregated service operation as
  * MCP tools over `POST <path>` (default: `/mcp`). Mount **after** auth and
@@ -69,10 +89,11 @@ export function mountMcp<Env>(
     };
     context.state.set(MCP_STATE_KEY, stateInfo);
 
-    if (
-      context.request.method.toUpperCase() === "POST" &&
-      matchesPath(context.url.pathname, resolved.path)
-    ) {
+    if (matchesPath(context.url.pathname, resolved.path)) {
+      if (context.request.method.toUpperCase() !== "POST") {
+        return unsupportedTransportResponse(resolved.path);
+      }
+
       if (resolved.oauth) {
         const oauth = await resolved.oauth.verify({
           request: context.request,

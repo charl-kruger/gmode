@@ -276,14 +276,29 @@ describe("mountMcp middleware", () => {
     expect(res.headers.get("content-type")).toMatch(/application\/json/);
   });
 
-  it("only intercepts POST <path>", async () => {
+  it("returns a clear error for legacy SSE GET requests", async () => {
     const { gateway, env } = buildGateway();
     const res = await gateway.fetch(
-      new Request("https://api.test/mcp", { method: "GET" }),
+      new Request("https://api.test/mcp", {
+        method: "GET",
+        headers: { accept: "text/event-stream" },
+      }),
       env,
       execCtx(),
     );
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(405);
+    expect(res.headers.get("allow")).toBe("POST");
+    expect(res.headers.get("x-gmode-mcp-transport")).toBe("streamable-http");
+    const body = (await res.json()) as {
+      error: string;
+      transport: string;
+      method: string;
+      path: string;
+    };
+    expect(body.error).toContain("Legacy SSE transport is not supported");
+    expect(body.transport).toBe("streamable-http");
+    expect(body.method).toBe("POST");
+    expect(body.path).toBe("/mcp");
   });
 });
 
