@@ -1,6 +1,9 @@
 import { ApiError, type GatewayContext } from "@gmode/core";
 import {
   authorizeForService,
+  FLAGS_BINDING_MISSING_STATE_KEY,
+  FLAGS_GATE_BEHAVIOR_STATE_KEY,
+  FLAGS_GATES_STATE_KEY,
   forwardToService,
   getGatewayInternals,
   type AnyServiceConfig,
@@ -64,6 +67,62 @@ function buildGatewayContextFor(
   if (context.auth.user) out.user = context.auth.user;
   if (context.auth.tenant) out.tenant = context.auth.tenant;
   return out;
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  return Object.values(value).every((entry) => typeof entry === "string");
+}
+
+function pathMatchesMount(pathname: string, mount: string): boolean {
+  if (mount === "/" || mount === "") return true;
+  const normalized = mount.endsWith("/") ? mount.slice(0, -1) : mount;
+  return pathname === normalized || pathname.startsWith(`${normalized}/`);
+}
+
+function gateError(behavior: "404" | "503"): ApiError {
+  if (behavior === "503") {
+    return new ApiError({
+      code: "SERVICE_DISABLED",
+      message: "Service temporarily disabled",
+      status: 503,
+    });
+  }
+  return new ApiError({
+    code: "NOT_FOUND",
+    message: "Not found",
+    status: 404,
+  });
+}
+
+async function authorizeFeatureFlagMountGate<Env>(
+  context: GatewayRequestContext<Env>,
+  pathname: string,
+): Promise<void> {
+  const rawGates = context.state.get(FLAGS_GATES_STATE_KEY);
+  if (!isStringRecord(rawGates)) return;
+  if (!context.flags) {
+    if (context.state.get(FLAGS_BINDING_MISSING_STATE_KEY) === true) return;
+    throw new ApiError({
+      code: "FEATURE_FLAGS_UNAVAILABLE",
+      message: "Feature flags client unavailable",
+      status: 500,
+      expose: false,
+    });
+  }
+
+  const rawBehavior = context.state.get(FLAGS_GATE_BEHAVIOR_STATE_KEY);
+  const behavior = rawBehavior === "503" ? "503" : "404";
+  for (const [mount, flagKey] of Object.entries(rawGates)) {
+    if (pathMatchesMount(pathname, mount)) {
+      const enabled = await context.flags.getBooleanValue(flagKey, false);
+      if (!enabled) {
+        throw gateError(behavior);
+      }
+    }
+  }
 }
 
 async function evaluateFeatureFlag<Env>(
@@ -204,6 +263,7 @@ export async function invokeOperation<Env>(input: {
     `${fullPath}${queryString}`,
     context.url.origin,
   );
+  await authorizeFeatureFlagMountGate(context, internalUrl.pathname);
 
   const syntheticRequest = new Request(internalUrl.toString(), {
     method: entry.method,

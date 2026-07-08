@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createGateway,
+  featureFlags,
   jsonErrors,
   jwtAuth,
   requestId,
@@ -9,6 +10,7 @@ import { z, createService } from "@gmode/service";
 import {
   base64urlEncodeString,
   hmacSign,
+  type FlagshipBinding,
   type FetcherLike,
 } from "@gmode/core";
 import { mountMcp } from "./middleware";
@@ -51,7 +53,41 @@ type GwEnv = {
   USERS_API: FetcherLike;
   BILLING_API: FetcherLike;
   JWT_SECRET: string;
+  FLAGS?: FlagshipBinding;
 };
+
+function mockFlagship(booleans: Record<string, boolean>): FlagshipBinding {
+  return {
+    async get(flagKey, defaultValue) {
+      return booleans[flagKey] ?? defaultValue;
+    },
+    async getBooleanValue(flagKey, defaultValue) {
+      return booleans[flagKey] ?? defaultValue;
+    },
+    async getStringValue(_flagKey, defaultValue) {
+      return defaultValue;
+    },
+    async getNumberValue(_flagKey, defaultValue) {
+      return defaultValue;
+    },
+    async getObjectValue(_flagKey, defaultValue) {
+      return defaultValue;
+    },
+    async getBooleanDetails(flagKey, defaultValue) {
+      const value = booleans[flagKey] ?? defaultValue;
+      return { flagKey, value, reason: "mock" };
+    },
+    async getStringDetails(flagKey, defaultValue) {
+      return { flagKey, value: defaultValue, reason: "mock" };
+    },
+    async getNumberDetails(flagKey, defaultValue) {
+      return { flagKey, value: defaultValue, reason: "mock" };
+    },
+    async getObjectDetails(flagKey, defaultValue) {
+      return { flagKey, value: defaultValue, reason: "mock" };
+    },
+  };
+}
 
 function buildUsersService() {
   const svc = createService<SvcEnv>({
@@ -222,6 +258,67 @@ function buildOAuthGateway() {
   return { gateway, env };
 }
 
+function buildGatedGateway() {
+  const users = buildUsersService();
+  const billing = buildBillingService();
+  let billingCalls = 0;
+  const billingFetcher: FetcherLike = {
+    fetch: async (req) => {
+      if (!new URL(req.url).pathname.endsWith("/openapi.json")) {
+        billingCalls += 1;
+      }
+      return billing.fetch(req, {}, execCtx());
+    },
+  };
+  const env: GwEnv = {
+    USERS_API: bindService(users, {}),
+    BILLING_API: billingFetcher,
+    JWT_SECRET,
+    FLAGS: mockFlagship({ "billing-enabled": false }),
+  };
+  const gateway = createGateway<GwEnv>({
+    name: "Example API",
+    version: "1.0.0",
+  });
+  gateway.use(requestId());
+  gateway.use(jsonErrors());
+  gateway.use(jwtAuth<GwEnv>({
+    secret: (e) => e.JWT_SECRET,
+    required: false
+  }));
+  gateway.use(
+    featureFlags<GwEnv, "FLAGS">({
+      binding: "FLAGS",
+      gates: { "/billing": "billing-enabled" },
+    }),
+  );
+  gateway.use(
+    mountMcp<GwEnv>({
+      path: "/mcp",
+      serverInfo: { name: "Example API MCP", version: "1.0.0" },
+    }),
+  );
+  gateway.service("users", {
+    mount: "/users",
+    binding: "USERS_API",
+    audience: "users",
+    openapi: true,
+  });
+  gateway.service("billing", {
+    mount: "/billing",
+    binding: "BILLING_API",
+    audience: "billing",
+    auth: true,
+    scopes: ["billing:*"],
+    openapi: true,
+  });
+  return {
+    gateway,
+    env,
+    getBillingCalls: () => billingCalls,
+  };
+}
+
 async function postRpc(
   gateway: ReturnType<typeof createGateway<GwEnv>>,
   env: GwEnv,
@@ -310,13 +407,23 @@ describe("MCP protocol over POST /mcp", () => {
       id: 1,
       method: "initialize",
       params: {
-        protocolVersion: "2024-11-05",
+        protocolVersion: "2025-06-18",
         capabilities: {},
         clientInfo: { name: "test", version: "0" },
       },
     })) as { result: { serverInfo: { name: string; }; protocolVersion: string; }; };
     expect(reply.result.serverInfo.name).toBe("Example API MCP");
-    expect(reply.result.protocolVersion).toBe("2024-11-05");
+    expect(reply.result.protocolVersion).toBe("2025-06-18");
+  });
+
+  it("returns 202 with no body for JSON-RPC notifications", async () => {
+    const { gateway, env } = buildGateway();
+    const res = await postRawRpc(gateway, env, {
+      jsonrpc: "2.0",
+      method: "notifications/initialized",
+    });
+    expect(res.status).toBe(202);
+    expect(await res.text()).toBe("");
   });
 
   it("advertises tools, resources, and prompts capabilities", async () => {
@@ -326,7 +433,7 @@ describe("MCP protocol over POST /mcp", () => {
       id: 17,
       method: "initialize",
       params: {
-        protocolVersion: "2024-11-05",
+        protocolVersion: "2025-06-18",
         capabilities: {},
         clientInfo: { name: "test", version: "0" },
       },
@@ -441,6 +548,31 @@ describe("MCP protocol over POST /mcp", () => {
       { headers: { authorization: `Bearer ${token}` } },
     )) as { error?: { data?: { code: string; }; }; };
     expect(reply.error?.data?.code).toBe("INSUFFICIENT_SCOPE");
+  });
+
+  it("invoke respects gateway feature-flag mount gates", async () => {
+    const { gateway, env, getBillingCalls } = buildGatedGateway();
+    const token = await makeJwt({ sub: "u1", scope: "billing:*" });
+    const reply = (await postRpc(
+      gateway,
+      env,
+      {
+        jsonrpc: "2.0",
+        id: 16,
+        method: "tools/call",
+        params: {
+          name: "invoke",
+          arguments: {
+            operationId: "createInvoice",
+            body: { total: 4999, currency: "USD" },
+          },
+        },
+      },
+      { headers: { authorization: `Bearer ${token}` } },
+    )) as { error?: { data?: { code: string; status: number; }; }; };
+    expect(reply.error?.data?.code).toBe("NOT_FOUND");
+    expect(reply.error?.data?.status).toBe(404);
+    expect(getBillingCalls()).toBe(0);
   });
 
   it("invoke surfaces missing-path-param as InvalidParams", async () => {

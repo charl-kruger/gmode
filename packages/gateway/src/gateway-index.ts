@@ -185,7 +185,7 @@ export function gatewayIndexHtml<Env>(input: {
   const curlInit = mcp
     ? `curl -X POST ${mcpFullUrl} \\
   -H "content-type: application/json" \\
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'`
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'`
     : "";
   const curlList = mcp
     ? `curl -X POST ${mcpFullUrl} \\

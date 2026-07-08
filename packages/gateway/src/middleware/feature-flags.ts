@@ -11,6 +11,7 @@ import type { GatewayMiddleware, GatewayRequestContext } from "../types";
 export const FORWARDED_FLAGS_STATE_KEY = "gmode.forwardedFlags";
 export const FLAGS_BINDING_NAME_STATE_KEY = "gmode.flagsBindingName";
 export const FLAGS_GATES_STATE_KEY = "gmode.flagsGates";
+export const FLAGS_GATE_BEHAVIOR_STATE_KEY = "gmode.flagsGateBehavior";
 export const FLAGS_BINDING_MISSING_STATE_KEY = "gmode.flagsBindingMissing";
 
 /** Options for gateway integration with Cloudflare Flagship. */
@@ -94,6 +95,7 @@ export function featureFlags<Env, Binding extends keyof Env & string>(
         context.state.set(FLAGS_BINDING_MISSING_STATE_KEY, true);
         if (options.gates) {
           context.state.set(FLAGS_GATES_STATE_KEY, { ...options.gates });
+          context.state.set(FLAGS_GATE_BEHAVIOR_STATE_KEY, gateBehavior);
         }
         return next();
       }
@@ -116,6 +118,7 @@ export function featureFlags<Env, Binding extends keyof Env & string>(
     context.state.set(FLAGS_BINDING_NAME_STATE_KEY, options.binding);
     if (options.gates) {
       context.state.set(FLAGS_GATES_STATE_KEY, { ...options.gates });
+      context.state.set(FLAGS_GATE_BEHAVIOR_STATE_KEY, gateBehavior);
     }
 
     if (options.gates) {

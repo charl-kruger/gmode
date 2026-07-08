@@ -24,7 +24,6 @@ service.get("/:id", {
   operationId: "getUser",
   summary: "Get user",
   tags: ["Users"],
-  scopes: ["users:read"],
   params: z.object({
     id: z.string(),
   }),
@@ -49,7 +48,6 @@ service.get("/v2/:id", {
   operationId: "getUserV2",
   summary: "Get user (v2)",
   tags: ["Users"],
-  scopes: ["users:read"],
   featureFlag: "users-v2",
   params: z.object({
     id: z.string(),
@@ -68,7 +66,6 @@ service.get("/", {
   operationId: "listUsers",
   summary: "List users",
   tags: ["Users"],
-  scopes: ["users:read"],
   query: z.object({
     limit: z.coerce.number().int().min(1).max(100).default(10),
   }),
@@ -98,7 +95,6 @@ const rpc = createRpcService<Env>({
   },
 }).method("getUserById", {
   description: "Look up a user by ID over service-to-service RPC",
-  scopes: ["users:read"],
   input: z.object({ id: z.string() }),
   output: User,
   handler: async ({ input }) => {

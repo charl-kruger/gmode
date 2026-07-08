@@ -44,6 +44,20 @@ When running `npx @modelcontextprotocol/inspector`, select:
 Do not select `SSE`; the inspector still offers it for older servers, but this
 example does not expose a legacy SSE session endpoint.
 
+To force the inspector UI to open with the correct transport selected:
+
+```text
+http://localhost:6274/?transport=streamable-http&serverUrl=http://127.0.0.1:8787/mcp
+```
+
+CLI smoke test:
+
+```bash
+npx @modelcontextprotocol/inspector@latest --cli http://127.0.0.1:8787/mcp \
+  --transport http \
+  --method tools/list
+```
+
 ## Deploy
 
 Deploy each Worker with services first and the gateway last. The downstream

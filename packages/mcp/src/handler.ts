@@ -17,6 +17,8 @@ import {
 } from "./resources-prompts";
 import { buildOperationTools } from "./tools-from-openapi";
 import {
+  acceptedNotificationResponse,
+  isJsonRpcNotification,
   jsonRpcResponse,
   methodNotFound,
   parseStreamableRequest,
@@ -30,7 +32,7 @@ import type {
   ResolvedMcpOptions,
 } from "./types";
 
-const MCP_PROTOCOL_VERSION = "2024-11-05";
+const MCP_PROTOCOL_VERSION = "2025-06-18";
 
 async function buildCatalog<Env>(
   context: GatewayRequestContext<Env>,
@@ -277,14 +279,21 @@ export async function handleMcpRequest<Env>(input: {
   if (!parsed.ok) {
     return jsonRpcResponse(parsed.response);
   }
+  const notification = isJsonRpcNotification(parsed.request);
   try {
     const reply = await dispatchMcp({
       context: input.context,
       options: input.options,
       rpc: parsed.request,
     });
+    if (notification) {
+      return acceptedNotificationResponse();
+    }
     return jsonRpcResponse(reply);
   } catch (err) {
+    if (notification) {
+      return acceptedNotificationResponse();
+    }
     return jsonRpcResponse({
       jsonrpc: "2.0",
       id: parsed.request.id ?? null,

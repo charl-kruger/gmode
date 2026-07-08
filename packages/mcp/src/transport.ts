@@ -29,6 +29,10 @@ export function isJsonRpcRequest(value: unknown): value is JsonRpcRequest {
   return obj["jsonrpc"] === "2.0" && typeof obj["method"] === "string";
 }
 
+export function isJsonRpcNotification(value: JsonRpcRequest): boolean {
+  return value.id === undefined;
+}
+
 export function success(id: JsonRpcId, result: unknown): JsonRpcSuccess {
   return { jsonrpc: "2.0", id, result };
 }
@@ -121,4 +125,9 @@ export function jsonRpcResponse(payload: JsonRpcResponse): Response {
     status: 200,
     headers: { "content-type": "application/json; charset=utf-8" },
   });
+}
+
+/** Build the Streamable-HTTP response for JSON-RPC notifications. */
+export function acceptedNotificationResponse(): Response {
+  return new Response(null, { status: 202 });
 }

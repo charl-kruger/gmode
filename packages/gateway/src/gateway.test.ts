@@ -343,6 +343,40 @@ describe("gateway", () => {
     expect(verified.iss).toBe("gmode-gateway");
   });
 
+  it("returns mutable service-binding responses to response middleware", async () => {
+    const users = mockFetcher(() =>
+      Response.redirect("https://api.test/users/new-location", 302),
+    );
+
+    const gateway = createGateway<Env>({
+      name: "T",
+      version: "1.0.0",
+    });
+    gateway.use(cors());
+    gateway.service("users", {
+      mount: "/users",
+      binding: "USERS_API",
+      auth: false,
+    });
+
+    const res = await gateway.fetch(
+      new Request("https://api.test/users/old", {
+        headers: { origin: "https://app.test" },
+      }),
+      {
+        USERS_API: users,
+        RL: mockRateLimit(),
+      },
+      execCtx(),
+    );
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe(
+      "https://api.test/users/new-location",
+    );
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
+  });
+
   it("serves an HTML landing page at /", async () => {
     const gateway = createGateway<Env>({
       name: "Cool API",

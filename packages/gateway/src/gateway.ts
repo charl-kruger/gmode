@@ -167,12 +167,16 @@ function deprecationHeaders(
   return headers;
 }
 
-function withExtraHeaders(response: Response, extra: HeadersInit | undefined): Response {
-  if (!extra) return response;
+function withMutableHeaders(
+  response: Response,
+  extra: HeadersInit | undefined,
+): Response {
   const headers = new Headers(response.headers);
-  new Headers(extra).forEach((value, key) => {
-    headers.set(key, value);
-  });
+  if (extra) {
+    new Headers(extra).forEach((value, key) => {
+      headers.set(key, value);
+    });
+  }
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -481,7 +485,10 @@ async function route<Env>(
     context,
     ...(cache ? { cache } : {}),
   });
-  return withExtraHeaders(response, deprecationHeaders(match.service.apiVersion));
+  return withMutableHeaders(
+    response,
+    deprecationHeaders(match.service.apiVersion),
+  );
 }
 
 export class GatewayImpl<Env> implements Gateway<Env> {

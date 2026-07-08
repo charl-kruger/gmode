@@ -53,7 +53,12 @@ export type {
   AnalyticsEngineTelemetryOptions,
   GatewayTelemetrySpan,
 } from "./middleware/telemetry";
-export { featureFlags } from "./middleware/feature-flags";
+export {
+  featureFlags,
+  FLAGS_BINDING_MISSING_STATE_KEY,
+  FLAGS_GATE_BEHAVIOR_STATE_KEY,
+  FLAGS_GATES_STATE_KEY,
+} from "./middleware/feature-flags";
 export type { FeatureFlagsOptions } from "./middleware/feature-flags";
 export { mtls } from "./middleware/mtls";
 export type { MtlsOptions, MtlsCertInfo } from "./middleware/mtls";

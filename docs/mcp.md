@@ -154,8 +154,22 @@ GMode does not serve an SSE session endpoint. If the inspector logs
 `SSE transport` or `Does the MCP server support SSE?`, switch the transport
 type to `Streamable HTTP`.
 
+To force the inspector UI to open with the right transport selected:
+
+```text
+http://localhost:6274/?transport=streamable-http&serverUrl=http://127.0.0.1:8787/mcp
+```
+
+Inspector CLI smoke test:
+
+```bash
+npx @modelcontextprotocol/inspector@latest --cli http://127.0.0.1:8787/mcp \
+  --transport http \
+  --method tools/list
+```
+
 When running the repository example locally, start the gateway with
-`pnpm dev -- --port 8787` from `examples/gateway-basic/gateway`. The example
+`pnpm dev --port 8787` from `examples/gateway-basic/gateway`. The example
 Wrangler config runs `pnpm build:deps` first, so local `@gmode/gateway` and
 `@gmode/mcp` workspace packages have their `dist` exports before Wrangler
 bundles the Worker.
@@ -165,7 +179,7 @@ bundles the Worker.
 ```bash
 curl -s -X POST http://localhost:8787/mcp \
   -H "content-type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
 
 curl -s -X POST http://localhost:8787/mcp \
   -H "content-type: application/json" \

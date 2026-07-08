@@ -30,7 +30,9 @@ export type { McpErrorPayload } from "./errors";
 export {
   parseStreamableRequest,
   jsonRpcResponse,
+  acceptedNotificationResponse,
   isJsonRpcRequest,
+  isJsonRpcNotification,
   success,
   error,
   parseError,
