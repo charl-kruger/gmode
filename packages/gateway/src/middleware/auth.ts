@@ -25,10 +25,19 @@ type JwtPayload = Record<string, unknown> & {
   permissions?: string[];
 };
 
+/** Options for `jwtAuth()`, the gateway's built-in HS256 bearer-token middleware. */
 export type JwtAuthOptions<Env> = {
+  /**
+   * JWT HMAC secret or resolver from Worker env.
+   *
+   * Use a resolver for Cloudflare secrets: `secret: (env) => env.JWT_SECRET`.
+   */
   secret: EnvResolver<Env, string>;
+  /** Optional issuer (`iss`) claim that every verified token must match. */
   issuer?: string;
+  /** Optional audience (`aud`) claim that every verified token must include. */
   audience?: string;
+  /** Whether a missing bearer token fails the request. Defaults to `true`. */
   required?: boolean;
   /**
    * Skip signature/expiry verification because an upstream layer
@@ -39,9 +48,13 @@ export type JwtAuthOptions<Env> = {
    * configured for the route in the Cloudflare dashboard.
    */
   assumeShieldVerified?: boolean;
+  /** Map the decoded JWT payload into the GMode user object. Defaults to `sub`, `email`, and `name`. */
   mapUser?: (payload: Record<string, unknown>) => GModeUser;
+  /** Map the decoded JWT payload into an optional tenant. */
   mapTenant?: (payload: Record<string, unknown>) => GModeTenant | undefined;
+  /** Map the decoded JWT payload into scopes. Defaults to `scope` or `scopes`. */
   mapScopes?: (payload: Record<string, unknown>) => string[];
+  /** Map the decoded JWT payload into permissions. Defaults to `permissions`. */
   mapPermissions?: (payload: Record<string, unknown>) => string[];
 };
 
@@ -162,6 +175,13 @@ async function verifyHs256(
   }
 }
 
+/**
+ * Authenticate gateway requests with an `Authorization: Bearer <jwt>` header.
+ *
+ * The middleware verifies HS256 tokens unless `assumeShieldVerified` is set,
+ * then populates `context.auth` for service auth, scope checks, MCP calls,
+ * telemetry, and downstream gateway context.
+ */
 export function jwtAuth<Env>(
   options: JwtAuthOptions<Env>,
 ): GatewayMiddleware<Env> {
@@ -261,16 +281,31 @@ export function jwtAuth<Env>(
   };
 }
 
+/** Options for `apiKeyAuth()`, a bring-your-own API key verifier. */
 export type ApiKeyAuthOptions<Env> = {
+  /** Header name containing the API key. Defaults to `x-api-key`. */
   header?: string;
+  /** Optional query parameter name to read when the header is absent. */
   query?: string;
+  /** Whether a missing API key fails the request. Defaults to `true`. */
   required?: boolean;
+  /**
+   * Verify the supplied key and return an auth context.
+   *
+   * Return `null` to reject the key with `401 INVALID_API_KEY`.
+   */
   verify: (
     key: string,
     context: GatewayRequestContext<Env>,
   ) => MaybePromise<AuthContext | null>;
 };
 
+/**
+ * Authenticate gateway requests with an API key from a header or query string.
+ *
+ * The returned `AuthContext` becomes `context.auth` and is used by gateway
+ * service auth, scope checks, telemetry, and downstream private context.
+ */
 export function apiKeyAuth<Env>(
   options: ApiKeyAuthOptions<Env>,
 ): GatewayMiddleware<Env> {

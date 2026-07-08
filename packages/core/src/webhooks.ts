@@ -4,13 +4,19 @@ import { hmacSign, hmacVerify } from "./crypto";
 const WEBHOOK_SIGNATURE_VERSION = "v1";
 const DEFAULT_TOLERANCE_SECONDS = 300;
 
+/** Canonical GMode webhook event envelope. */
 export type WebhookEvent<Payload> = {
+  /** Stable event id used for signatures and idempotency. */
   id: string;
+  /** Event type, for example `user.created`. */
   type: string;
+  /** ISO timestamp when the event was created. */
   createdAt: string;
+  /** Event-specific payload. */
   data: Payload;
 };
 
+/** Input for creating a webhook event envelope. */
 export type CreateWebhookEventInput<Payload> = {
   id: string;
   type: string;
@@ -18,6 +24,7 @@ export type CreateWebhookEventInput<Payload> = {
   createdAt?: string;
 };
 
+/** Headers attached to signed webhook delivery requests. */
 export type WebhookSignatureHeaders = {
   "x-gmode-webhook-id": string;
   "x-gmode-webhook-timestamp": string;
@@ -25,14 +32,21 @@ export type WebhookSignatureHeaders = {
   "x-gmode-webhook-key-id"?: string;
 };
 
+/** Input for signing an already-serialized webhook body. */
 export type SignWebhookBodyInput = {
+  /** Webhook event id. */
   id: string;
+  /** Exact request body string that will be sent. */
   body: string;
+  /** HMAC secret. */
   secret: string;
+  /** Unix timestamp override. Defaults to current time. */
   timestamp?: number;
+  /** Optional key id for secret rotation. */
   keyId?: string;
 };
 
+/** Secret accepted by `verifyWebhookBody()`, optionally keyed for rotation. */
 export type WebhookSecret =
   | {
       keyId: string;
@@ -43,25 +57,34 @@ export type WebhookSecret =
       keyId?: never;
     };
 
+/** Input for verifying a received webhook body and signature headers. */
 export type VerifyWebhookBodyInput = {
+  /** Exact raw request body string received by the endpoint. */
   body: string;
+  /** Incoming request headers containing GMode webhook signature headers. */
   headers: Headers;
+  /** Candidate secrets. Include previous and current secrets during rotation. */
   secrets: WebhookSecret[];
+  /** Unix timestamp override, useful for tests. */
   now?: number;
+  /** Allowed timestamp skew in seconds. Defaults to `300`. */
   toleranceSeconds?: number;
 };
 
+/** Successful webhook signature verification result. */
 export type VerifiedWebhookSignature = {
   id: string;
   timestamp: number;
   keyId?: string;
 };
 
+/** Queue send options used by `enqueueWebhookDelivery()`. */
 export type WebhookQueueSendOptions = {
   contentType?: string;
   delaySeconds?: number;
 };
 
+/** Minimal Queue binding shape needed to enqueue webhook deliveries. */
 export type WebhookQueue<Payload> = {
   send(
     message: WebhookDeliveryMessage<Payload>,
@@ -69,6 +92,7 @@ export type WebhookQueue<Payload> = {
   ): Promise<void>;
 };
 
+/** Queue message that describes a pending webhook delivery. */
 export type WebhookDeliveryMessage<Payload> = {
   id: string;
   type: string;
@@ -78,6 +102,7 @@ export type WebhookDeliveryMessage<Payload> = {
   headers?: Record<string, string>;
 };
 
+/** Input for `enqueueWebhookDelivery()`. */
 export type EnqueueWebhookDeliveryInput<Payload> = {
   queue: WebhookQueue<Payload>;
   event: WebhookEvent<Payload>;
@@ -86,6 +111,7 @@ export type EnqueueWebhookDeliveryInput<Payload> = {
   delaySeconds?: number;
 };
 
+/** Input for delivering one queued webhook message. */
 export type DeliverWebhookMessageInput<Payload> = {
   message: WebhookDeliveryMessage<Payload>;
   secret: string;
@@ -93,6 +119,7 @@ export type DeliverWebhookMessageInput<Payload> = {
   fetch?: typeof fetch;
 };
 
+/** Create a canonical webhook event envelope with an ISO timestamp. */
 export function createWebhookEvent<Payload>(
   input: CreateWebhookEventInput<Payload>,
 ): WebhookEvent<Payload> {
@@ -104,12 +131,14 @@ export function createWebhookEvent<Payload>(
   };
 }
 
+/** Serialize a webhook event exactly as it should be signed and delivered. */
 export function serializeWebhookEvent<Payload>(
   event: WebhookEvent<Payload>,
 ): string {
   return JSON.stringify(event);
 }
 
+/** Sign a serialized webhook body and return headers to attach to the request. */
 export async function signWebhookBody(
   input: SignWebhookBodyInput,
 ): Promise<WebhookSignatureHeaders> {
@@ -127,6 +156,12 @@ export async function signWebhookBody(
   return headers;
 }
 
+/**
+ * Verify a received webhook body against GMode signature headers.
+ *
+ * Throws `ApiError` when required headers are missing, the timestamp is outside
+ * tolerance, the key id is unknown, or no secret matches the signature.
+ */
 export async function verifyWebhookBody(
   input: VerifyWebhookBodyInput,
 ): Promise<VerifiedWebhookSignature> {
@@ -165,6 +200,7 @@ export async function verifyWebhookBody(
   throw invalidSignature("Invalid webhook signature");
 }
 
+/** Enqueue a webhook event for asynchronous delivery through a Queue binding. */
 export async function enqueueWebhookDelivery<Payload>(
   input: EnqueueWebhookDeliveryInput<Payload>,
 ): Promise<void> {
@@ -187,6 +223,12 @@ export async function enqueueWebhookDelivery<Payload>(
   await input.queue.send(message, options);
 }
 
+/**
+ * Deliver one queued webhook message with GMode signature headers.
+ *
+ * Throws `WEBHOOK_DELIVERY_FAILED` when the destination returns a non-2xx
+ * response.
+ */
 export async function deliverWebhookMessage<Payload>(
   input: DeliverWebhookMessageInput<Payload>,
 ): Promise<Response> {

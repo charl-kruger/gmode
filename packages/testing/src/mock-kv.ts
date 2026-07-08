@@ -1,15 +1,18 @@
+/** Stored value inside `createMockKvNamespace()`. */
 export type MockKvValue = {
   value: string;
   metadata?: unknown;
   expiration?: number;
 };
 
+/** KV key shape returned from mock `list()`. */
 export type MockKvListKey = {
   name: string;
   expiration?: number;
   metadata?: unknown;
 };
 
+/** KV list result returned by the mock namespace. */
 export type MockKvListResult = {
   keys: MockKvListKey[];
   list_complete: boolean;
@@ -17,6 +20,7 @@ export type MockKvListResult = {
   cacheStatus: null;
 };
 
+/** In-memory KV namespace mock with an inspectable `entries` map. */
 export type MockKvNamespace = {
   readonly entries: Map<string, MockKvValue>;
   get(key: string): Promise<string | null>;
@@ -30,6 +34,7 @@ export type MockKvNamespace = {
   clear(): void;
 };
 
+/** Create an in-memory KV namespace mock for tests. */
 export function createMockKvNamespace(
   initial?: Record<string, string>,
 ): MockKvNamespace {

@@ -1,16 +1,19 @@
 import type { MaybePromise } from "@gmode/core";
 import type { GatewayMiddleware, GatewayRequestContext } from "../types";
 
+/** Data point shape accepted by Cloudflare Analytics Engine bindings. */
 export type AnalyticsEngineDataPoint = {
   indexes?: string[];
   blobs?: string[];
   doubles?: number[];
 };
 
+/** Minimal Analytics Engine binding shape used by GMode telemetry. */
 export type AnalyticsEngineDataset = {
   writeDataPoint(point: AnalyticsEngineDataPoint): void;
 };
 
+/** Normalized request span exported by `gatewayTelemetry()`. */
 export type GatewayTelemetrySpan = {
   name: "gmode.gateway.request";
   requestId: string;
@@ -24,27 +27,40 @@ export type GatewayTelemetrySpan = {
   tenantId?: string;
 };
 
+/** Custom telemetry exporter hook. */
 export type GatewayTelemetryExporter = {
   export(span: GatewayTelemetrySpan): MaybePromise<void>;
 };
 
+/** Analytics Engine sink configuration for gateway telemetry. */
 export type AnalyticsEngineTelemetryOptions<
   Env,
   Binding extends keyof Env & string,
 > = {
+  /** Analytics Engine binding name in the gateway Worker env. */
   binding: Binding;
+  /** Build the Analytics Engine index value. Defaults to request path. */
   index?: (span: GatewayTelemetrySpan) => string;
 };
 
+/** Options for exporting gateway request telemetry. */
 export type GatewayTelemetryOptions<
   Env,
   Binding extends keyof Env & string,
 > = {
+  /** Optional Cloudflare Analytics Engine sink. */
   analytics?: AnalyticsEngineTelemetryOptions<Env, Binding>;
+  /** Additional custom exporters, for example traces or logs. */
   exporters?: GatewayTelemetryExporter[];
+  /** Sampling rate from `0` to `1`. Defaults to `1`. */
   sample?: number;
 };
 
+/**
+ * Capture request duration/status and export a gateway telemetry span.
+ *
+ * Use `analyticsEngine()` for the common Analytics Engine-only case.
+ */
 export function gatewayTelemetry<
   Env,
   Binding extends keyof Env & string,
@@ -77,6 +93,9 @@ export function gatewayTelemetry<
   };
 }
 
+/**
+ * Convenience middleware for writing gateway request spans to Analytics Engine.
+ */
 export function analyticsEngine<
   Env,
   Binding extends keyof Env & string,

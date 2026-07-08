@@ -1,5 +1,7 @@
+/** Structured log severity. */
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
+/** Structured JSON log entry emitted by GMode helpers. */
 export type LogEntry = {
   level: LogLevel;
   type?: string;
@@ -7,6 +9,7 @@ export type LogEntry = {
   [key: string]: unknown;
 };
 
+/** Write a structured JSON log entry to the matching console method. */
 export function logStructured(entry: LogEntry): void {
   const out = JSON.stringify(entry);
   switch (entry.level) {
@@ -24,6 +27,7 @@ export function logStructured(entry: LogEntry): void {
   }
 }
 
+/** Copy request headers into an object while redacting selected names. */
 export function redactHeaders(
   headers: Headers,
   names: string[],

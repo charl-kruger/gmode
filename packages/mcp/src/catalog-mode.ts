@@ -1,6 +1,7 @@
 import type { McpOperationEntry, McpServerCatalog, McpTool } from "./types";
 import { describeOperationLine } from "./tools-from-openapi";
 
+/** Catalog-mode tool used to search available API operations. */
 export const DISCOVER_TOOL: McpTool = {
   name: "discover",
   description:
@@ -31,6 +32,7 @@ export const DISCOVER_TOOL: McpTool = {
   },
 };
 
+/** Catalog-mode tool used to invoke a discovered operation by operation id. */
 export const INVOKE_TOOL: McpTool = {
   name: "invoke",
   description:
@@ -70,18 +72,21 @@ function matchesQuery(entry: McpOperationEntry, query: string): boolean {
   return false;
 }
 
+/** Input accepted by the catalog-mode `discover` tool. */
 export type DiscoverInput = {
   query?: string;
   tag?: string;
   limit?: number;
 };
 
+/** Output returned by the catalog-mode `discover` tool. */
 export type DiscoverOutput = {
   total: number;
   returned: number;
   operations: ReturnType<typeof describeOperationLine>[];
 };
 
+/** Search an MCP operation catalog by query/tag and return compact operation lines. */
 export function runDiscover(
   catalog: McpServerCatalog,
   input: DiscoverInput,

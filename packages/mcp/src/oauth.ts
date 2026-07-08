@@ -11,8 +11,15 @@ import type {
   McpOAuthProvider,
 } from "./types";
 
+/** Options for `bearerTokenOAuthProvider()`. */
 export type BearerTokenOAuthProviderOptions<Env = unknown> = {
+  /** Scopes required before MCP JSON-RPC handling starts. Supports `foo:*`. */
   requiredScopes?: string[];
+  /**
+   * Verify an OAuth bearer token and return the MCP identity.
+   *
+   * Return `null` to reject the token with `401 INVALID_AUTH_TOKEN`.
+   */
   verifyToken(input: {
     token: string;
     request: Request;
@@ -45,6 +52,11 @@ function defaultUser(subject: string): GModeUser {
   return { id: subject };
 }
 
+/**
+ * Merge a verified MCP OAuth identity into the gateway auth context.
+ *
+ * Existing gateway scopes and permissions are preserved and de-duplicated.
+ */
 export function mergeMcpOAuthAuth(input: McpAuthMergeInput): AuthContext {
   const oauthPermissions = input.oauth.permissions ?? [];
   const user = input.oauth.user ?? defaultUser(input.oauth.subject);
@@ -64,6 +76,13 @@ export function mergeMcpOAuthAuth(input: McpAuthMergeInput): AuthContext {
   return auth;
 }
 
+/**
+ * Create an MCP OAuth provider that reads `Authorization: Bearer <token>`.
+ *
+ * The provider verifies the token with `verifyToken`, enforces
+ * `requiredScopes`, then lets `mountMcp()` merge the returned identity into
+ * the gateway auth context before tool dispatch.
+ */
 export function bearerTokenOAuthProvider<Env = unknown>(
   options: BearerTokenOAuthProviderOptions<Env>,
 ): McpOAuthProvider<Env> {

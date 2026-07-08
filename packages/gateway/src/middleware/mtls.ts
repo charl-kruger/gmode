@@ -1,6 +1,7 @@
 import { ApiError } from "@gmode/core";
 import type { GatewayMiddleware } from "../types";
 
+/** Cloudflare `request.cf.tlsClientAuth` fields used by the mTLS middleware. */
 export type MtlsCertInfo = {
   certVerified: string;
   certPresented: string;
@@ -14,9 +15,13 @@ export type MtlsCertInfo = {
   certRevoked?: string;
 };
 
+/** Options for validating Cloudflare-provided client certificate metadata. */
 export type MtlsOptions<Env> = {
+  /** Whether a missing client certificate fails the request. Defaults to `true`. */
   required?: boolean;
+  /** Return `true` when the presented certificate should be accepted. */
   accept?: (cert: MtlsCertInfo) => boolean;
+  /** Hook invoked after a certificate is accepted and added to request state. */
   onAccepted?: (
     cert: MtlsCertInfo,
     ctx: import("../types").GatewayRequestContext<Env>,
@@ -33,6 +38,12 @@ function readCertFromRequest(request: Request): MtlsCertInfo | undefined {
   return cf.tlsClientAuth;
 }
 
+/**
+ * Require and validate Cloudflare mTLS client certificate metadata.
+ *
+ * Cloudflare must be configured to request client certificates for this to
+ * work; the middleware reads `request.cf.tlsClientAuth`.
+ */
 export function mtls<Env>(
   options: MtlsOptions<Env> = {},
 ): GatewayMiddleware<Env> {

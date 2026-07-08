@@ -17,10 +17,20 @@ function isFetcherLike(value: unknown): value is FetcherLike {
     typeof (value as Record<string, unknown>)["fetch"] === "function";
 }
 
+/**
+ * Fetch and merge internal OpenAPI documents from registered services.
+ *
+ * The gateway uses this for `/openapi.json`; integrators can call it when they
+ * need the same aggregated document outside the normal route.
+ */
 export async function aggregateOpenApi<Env>(input: {
+  /** Current gateway request context. */
   context: GatewayRequestContext<Env>;
+  /** Gateway Worker env bindings. */
   env: Env;
+  /** Gateway name/version metadata for the merged document. */
   gateway: { name: string; version: string };
+  /** Registered services to include when `openapi` is enabled. */
   services: GatewayServiceEntry<Env>[];
 }): Promise<OpenApiDocument> {
   const services: {

@@ -4,6 +4,7 @@ import type { GatewayContext } from "./types";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+/** Encode bytes as unpadded base64url. */
 export function base64urlEncode(bytes: Uint8Array | ArrayBuffer): string {
   const view =
     bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -14,10 +15,12 @@ export function base64urlEncode(bytes: Uint8Array | ArrayBuffer): string {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+/** UTF-8 encode a string as unpadded base64url. */
 export function base64urlEncodeString(value: string): string {
   return base64urlEncode(encoder.encode(value));
 }
 
+/** Decode unpadded base64url into bytes. */
 export function base64urlDecodeToBytes(value: string): Uint8Array {
   const padded = value.replace(/-/g, "+").replace(/_/g, "/");
   const pad = padded.length % 4;
@@ -37,6 +40,7 @@ function toArrayBuffer(view: Uint8Array): ArrayBuffer {
   return out;
 }
 
+/** Decode unpadded base64url into a UTF-8 string. */
 export function base64urlDecodeToString(value: string): string {
   return decoder.decode(base64urlDecodeToBytes(value));
 }
@@ -54,6 +58,7 @@ async function importHmacKey(
   );
 }
 
+/** Sign arbitrary data with HMAC-SHA256 and return unpadded base64url. */
 export async function hmacSign(
   secret: string,
   data: string,
@@ -67,6 +72,7 @@ export async function hmacSign(
   return base64urlEncode(signature);
 }
 
+/** Verify an HMAC-SHA256 base64url signature for arbitrary data. */
 export async function hmacVerify(
   secret: string,
   data: string,
@@ -87,14 +93,26 @@ export async function hmacVerify(
   );
 }
 
+/**
+ * Encode private gateway context for a downstream Service Binding request.
+ *
+ * This is intentionally not a public auth token. It is used after the gateway
+ * has selected a private Worker binding and is paired with
+ * `decodeGatewayContext()` on the service side.
+ */
 export function encodeGatewayContext(context: GatewayContext): string {
   return base64urlEncodeString(JSON.stringify(context));
 }
 
+/** Options for decoding private gateway context. */
 export type DecodeGatewayContextOptions = {
+  /** Expected downstream service audience. */
   audience: string;
+  /** Expected issuer. Defaults to `gmode-gateway`. */
   issuer?: "gmode-gateway";
+  /** Current unix timestamp override, useful for tests. */
   now?: number;
+  /** Allowed clock skew in seconds. Defaults to `30`. */
   clockSkewSeconds?: number;
 };
 
@@ -229,6 +247,12 @@ function parseGatewayContextValue(value: unknown): GatewayContext {
   return context;
 }
 
+/**
+ * Decode and validate private gateway context.
+ *
+ * Throws `ApiError` when the payload shape, issuer, audience, issued time, or
+ * expiry is invalid.
+ */
 export function decodeGatewayContext(
   token: string,
   options: DecodeGatewayContextOptions,

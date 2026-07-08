@@ -59,19 +59,30 @@ function toRpcFailure(err: unknown): RpcResult<never> {
   };
 }
 
+/** Runtime RPC service built with `createRpcService()`. */
 export interface RpcService<
   Env,
   Methods extends Record<string, RpcMethodSpec> = Record<string, never>,
 > {
+  /** Service name used in diagnostics and anonymous gateway context. */
   readonly name: string;
+  /** Registered RPC method names. */
   readonly methodNames: readonly string[];
+  /**
+   * Phantom typed client surface.
+   *
+   * Use `export type MyRpc = typeof rpc.client` in the service Worker, then
+   * type the caller's service binding as `MyRpc`.
+   */
   readonly client: RpcServiceClient<Methods>;
 
+  /** Register an RPC method and refine the service's typed client surface. */
   method<Name extends string, In, Out>(
     name: Name,
     config: RpcMethodConfig<Env, In, Out>,
   ): RpcService<Env, Methods & { [K in Name]: { input: In; output: Out } }>;
 
+  /** Invoke a registered method from the generated WorkerEntrypoint class. */
   invoke(
     name: string,
     envelope: RpcEnvelope<unknown>,
@@ -269,6 +280,12 @@ class RpcServiceImpl<Env> {
   }
 }
 
+/**
+ * Create a typed RPC service for Cloudflare Worker service bindings.
+ *
+ * Chain `.method(...)` calls, export `typeof rpc.client` for callers, and pass
+ * the service to `defineEntrypoint()` to expose RPC methods on the Worker class.
+ */
 export function createRpcService<Env = unknown>(
   options: RpcServiceOptions<Env>,
 ): RpcService<Env, Record<string, never>> {

@@ -1,12 +1,20 @@
 import { logStructured } from "@gmode/core";
 import type { GatewayMiddleware } from "../types";
 
+/** Options for structured request logging. */
 export type RequestLoggerOptions = {
+  /** Sampling rate from `0` to `1`. Defaults to `1` (log every request). */
   sample?: number;
+  /** Header names to redact if request header logging is added by an exporter. */
   redactHeaders?: string[];
+  /** Reserved for future request-body logging; currently only `false` is accepted. */
   logRequestBody?: false;
 };
 
+/**
+ * Log one structured line per gateway request with timing, status, service,
+ * auth state, user id, and tenant id.
+ */
 export function requestLogger<Env>(
   options?: RequestLoggerOptions,
 ): GatewayMiddleware<Env> {

@@ -1,11 +1,14 @@
+/** One operation in an API Shield sequence rule. */
 export type SequenceStep = {
   operationId: string;
   method?: string;
   endpoint?: string;
 };
 
+/** Action API Shield should take when a sequence is matched. */
 export type SequenceAction = "log" | "block";
 
+/** API Shield sequence rule definition. */
 export type SequenceRule = {
   name: string;
   description?: string;
@@ -14,10 +17,17 @@ export type SequenceRule = {
   withinSeconds?: number;
 };
 
+/** Validated set of API Shield sequence rules. */
 export type SequencePolicy = {
   rules: SequenceRule[];
 };
 
+/**
+ * Validate and define API Shield sequence rules.
+ *
+ * Throws when names are missing/duplicated, patterns have fewer than two
+ * steps, or rules exceed Cloudflare's nine-step sequence limit.
+ */
 export function defineSequences(rules: SequenceRule[]): SequencePolicy {
   const names = new Set<string>();
   for (const rule of rules) {

@@ -1,12 +1,15 @@
 import type { FetcherLike } from "@gmode/core";
 
+/** Handler used by `createMockFetcher()` for service-binding tests. */
 export type MockFetcherHandler = (request: Request) => Promise<Response> | Response;
 
+/** Mock Worker service binding that records every forwarded request. */
 export type MockFetcher = FetcherLike & {
   readonly calls: Request[];
   reset(): void;
 };
 
+/** Create a mock `FetcherLike` binding for gateway forwarding tests. */
 export function createMockFetcher(handler: MockFetcherHandler): MockFetcher {
   const calls: Request[] = [];
   return {
@@ -21,6 +24,7 @@ export function createMockFetcher(handler: MockFetcherHandler): MockFetcher {
   };
 }
 
+/** Mock Cloudflare native Rate Limiting binding. */
 export type MockRateLimit = {
   limit(input: { key: string }): Promise<{ success: boolean }>;
   readonly calls: { key: string }[];
@@ -28,6 +32,7 @@ export type MockRateLimit = {
   reset(): void;
 };
 
+/** Create a mock rate-limit binding whose next result can be toggled. */
 export function createMockRateLimit(initial: boolean = true): MockRateLimit {
   const calls: { key: string }[] = [];
   let next = initial;
@@ -47,6 +52,7 @@ export function createMockRateLimit(initial: boolean = true): MockRateLimit {
   };
 }
 
+/** Create a minimal `ExecutionContext` for unit tests. */
 export function createExecutionContext(): ExecutionContext {
   return {
     waitUntil(_promise: Promise<unknown>) {

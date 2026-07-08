@@ -1,8 +1,16 @@
 import { PUBLIC_REQUEST_ID_HEADER, isValidRequestId } from "@gmode/core";
 import type { GatewayMiddleware } from "../types";
 
+/**
+ * Read or generate a request id and expose it through `context.requestId`.
+ *
+ * The response receives the same header unless another middleware or service
+ * already set it.
+ */
 export function requestId<Env>(options?: {
+  /** Header used for incoming and outgoing request ids. Defaults to `x-request-id`. */
   header?: string;
+  /** Generator used when the incoming header is missing or invalid. */
   generator?: () => string;
 }): GatewayMiddleware<Env> {
   const header = options?.header ?? PUBLIC_REQUEST_ID_HEADER;

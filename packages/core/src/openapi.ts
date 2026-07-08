@@ -1,3 +1,4 @@
+/** Minimal OpenAPI document shape used by GMode aggregation helpers. */
 export type OpenApiDocument = {
   openapi: string;
   info: {
@@ -14,6 +15,7 @@ export type OpenApiDocument = {
   [key: string]: unknown;
 };
 
+/** Warning emitted when OpenAPI must be downgraded for API Shield compatibility. */
 export type ShieldDowngradeWarning = {
   path: string;
   method: string;
@@ -25,6 +27,7 @@ export type ShieldDowngradeWarning = {
     | "prefixItems-stripped";
 };
 
+/** Result returned by `toShieldCompatibleSpec()`. */
 export type ShieldDowngradeResult = {
   spec: OpenApiDocument;
   warnings: ShieldDowngradeWarning[];
@@ -44,8 +47,10 @@ type OpenApiHttpMethod = (typeof OPENAPI_HTTP_METHODS)[number];
 
 const OPENAPI_HTTP_METHOD_SET = new Set<string>(OPENAPI_HTTP_METHODS);
 
+/** Stable operation key in the form `"METHOD /path"`. */
 export type OpenApiOperationKey = `${string} ${string}`;
 
+/** Compact OpenAPI operation metadata. */
 export type OpenApiOperationSummary = {
   key: OpenApiOperationKey;
   method: Uppercase<OpenApiHttpMethod>;
@@ -53,6 +58,7 @@ export type OpenApiOperationSummary = {
   operationId?: string;
 };
 
+/** Result returned by `pruneOpenApiDocument()`. */
 export type PruneOpenApiDocumentResult = {
   spec: OpenApiDocument;
   included: OpenApiOperationSummary[];
@@ -79,12 +85,19 @@ function deepEqual(a: unknown, b: unknown): boolean {
   }
 }
 
+/** Service OpenAPI document to merge into a gateway document. */
 export type MergeServiceSpec = {
   serviceName: string;
   mount: string;
   spec: OpenApiDocument;
 };
 
+/**
+ * Merge downstream service OpenAPI documents into one gateway document.
+ *
+ * Paths are prefixed with each service mount and component schema/name
+ * collisions are rewritten where needed.
+ */
 export function mergeServiceSpecs(input: {
   base: OpenApiDocument;
   services: MergeServiceSpec[];
@@ -186,6 +199,7 @@ function cloneDeep<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+/** List HTTP operations from an OpenAPI document. */
 export function listOpenApiOperations(
   spec: OpenApiDocument,
 ): OpenApiOperationSummary[] {
@@ -212,6 +226,7 @@ export function listOpenApiOperations(
   return operations;
 }
 
+/** Build a stable `"METHOD /path"` operation key. */
 export function openApiOperationKey(
   method: string,
   path: string,
@@ -219,6 +234,11 @@ export function openApiOperationKey(
   return `${method.toUpperCase()} ${path}` as OpenApiOperationKey;
 }
 
+/**
+ * Return a copy of an OpenAPI document containing only selected operations.
+ *
+ * Referenced component schemas and security schemes are retained.
+ */
 export function pruneOpenApiDocument(input: {
   spec: OpenApiDocument;
   operationKeys: Iterable<OpenApiOperationKey>;
@@ -497,6 +517,11 @@ function downgradeSchema(
   return out;
 }
 
+/**
+ * Downgrade an OpenAPI document to the subset accepted by Cloudflare API Shield.
+ *
+ * Returns a cloned spec and warnings describing any lossy conversions.
+ */
 export function toShieldCompatibleSpec(
   spec: OpenApiDocument,
 ): ShieldDowngradeResult {

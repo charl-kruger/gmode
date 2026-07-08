@@ -1,3 +1,4 @@
+/** D1 query result returned by the mock prepared statement methods. */
 export type MockD1Result<Row> = {
   results: Row[];
   success: boolean;
@@ -8,6 +9,7 @@ export type MockD1Result<Row> = {
   };
 };
 
+/** Prepared statement mock returned by `MockD1Database.prepare()`. */
 export type MockD1PreparedStatement<Row> = {
   readonly sql: string;
   readonly params: unknown[];
@@ -18,6 +20,7 @@ export type MockD1PreparedStatement<Row> = {
   run(): Promise<MockD1Result<Row>>;
 };
 
+/** In-memory D1 database mock with inspectable executed statements. */
 export type MockD1Database = {
   readonly statements: Array<{ sql: string; params: unknown[] }>;
   prepare<Row = Record<string, unknown>>(sql: string): MockD1PreparedStatement<Row>;
@@ -30,6 +33,7 @@ export type MockD1Database = {
   clear(): void;
 };
 
+/** Create a D1 database mock for tests. Use `setResult()` to seed query rows. */
 export function createMockD1Database(): MockD1Database {
   const statements: Array<{ sql: string; params: unknown[] }> = [];
   const results = new Map<string, unknown[]>();

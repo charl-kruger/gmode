@@ -8,9 +8,18 @@ function defaultKey<Env>(context: GatewayRequestContext<Env>): string {
   return context.auth.user?.id ?? "anonymous";
 }
 
+/**
+ * In-memory rate limiter for unit tests and local development.
+ *
+ * This is not distributed across Worker isolates or regions. Use
+ * `cloudflareRateLimit()` or `durableObjectRateLimit()` for production.
+ */
 export function memoryRateLimit<Env>(options: {
+  /** Max requests allowed during the window. */
   limit: number;
+  /** Fixed-window length in seconds. */
   windowSeconds: number;
+  /** Per-request bucket key. Defaults to authenticated user id or `anonymous`. */
   key?: (context: GatewayRequestContext<Env>) => string;
 }): GatewayMiddleware<Env> {
   const keyFn = options.key ?? defaultKey;
@@ -40,6 +49,7 @@ export function memoryRateLimit<Env>(options: {
   };
 }
 
+/** Clear all in-memory rate-limit buckets. Intended for tests only. */
 export function __resetMemoryRateLimit(): void {
   store.clear();
 }

@@ -22,13 +22,21 @@ type StoredResponse = {
   bodyBase64: string;
 };
 
+/** Options for replay-safe unsafe HTTP methods backed by KV. */
 export type IdempotencyOptions<Env, Binding extends keyof Env & string> = {
+  /** KV namespace binding used to store request fingerprints and responses. */
   binding: Binding;
+  /** Seconds before stored idempotency entries expire. */
   ttlSeconds: number;
+  /** Header that carries the client idempotency key. Defaults to `idempotency-key`. */
   headerName?: string;
+  /** Unsafe methods protected by this middleware. Defaults to POST, PUT, PATCH, DELETE. */
   methods?: readonly UnsafeMethod[];
+  /** Optional path prefixes where idempotency is enforced. Defaults to all protected methods. */
   paths?: readonly `/${string}`[];
+  /** Customize the storage key scope. Default includes tenant id, user id, and raw key. */
   key?: (context: GatewayRequestContext<Env>, rawKey: string) => string;
+  /** Decide whether a response should be stored. Defaults to caching 2xx responses. */
   cacheResponse?: (response: Response) => boolean;
 };
 
@@ -40,6 +48,12 @@ const DEFAULT_METHODS: readonly UnsafeMethod[] = [
   "DELETE",
 ];
 
+/**
+ * Enforce idempotency keys for unsafe methods and replay matching responses.
+ *
+ * A reused key with a different request fingerprint fails with `409
+ * IDEMPOTENCY_KEY_CONFLICT`; a matching request receives the stored response.
+ */
 export function idempotency<
   Env,
   Binding extends keyof Env & string,

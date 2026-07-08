@@ -5,7 +5,9 @@ import type {
   FlagshipEvaluationDetails,
 } from "./types";
 
+/** Bound Flagship client with a fixed evaluation context. */
 export type FlagsClient = {
+  /** Evaluation context sent with every flag lookup. */
   readonly context: FlagshipEvaluationContext;
 
   get(flagKey: string, defaultValue?: unknown): Promise<unknown>;
@@ -37,6 +39,10 @@ export type FlagsClient = {
   withContext(extra: FlagshipEvaluationContext): FlagsClient;
 };
 
+/**
+ * Create a Flagship client that automatically sends the same context with
+ * every evaluation call.
+ */
 export function createFlagsClient(
   binding: FlagshipBinding,
   context: FlagshipEvaluationContext,
@@ -62,13 +68,18 @@ export function createFlagsClient(
   };
 }
 
+/** Input for `buildFlagshipContext()`. */
 export type BuildFlagshipContextInput = {
+  /** Gateway/service auth context to flatten into Flagship primitives. */
   auth: AuthContext;
+  /** Optional request id for flag targeting/audit. */
   requestId?: string;
 };
 
+/** OpenFeature-compatible evaluation context alias. */
 export type OpenFeatureEvaluationContext = FlagshipEvaluationContext;
 
+/** OpenFeature-compatible resolution details returned by the provider shim. */
 export type OpenFeatureResolutionDetails<T> = {
   value: T;
   variant?: string;
@@ -77,6 +88,7 @@ export type OpenFeatureResolutionDetails<T> = {
   errorMessage?: string;
 };
 
+/** Minimal OpenFeature provider facade backed by Cloudflare Flagship. */
 export type OpenFeatureProvider = {
   readonly metadata: {
     readonly name: "gmode-flagship";
@@ -103,6 +115,12 @@ export type OpenFeatureProvider = {
   ): Promise<OpenFeatureResolutionDetails<T>>;
 };
 
+/**
+ * Create a small OpenFeature-compatible provider backed by Flagship.
+ *
+ * Use this when code expects OpenFeature-style `resolve*Evaluation` methods
+ * but you want Cloudflare Flagship as the underlying binding.
+ */
 export function createOpenFeatureProvider(
   binding: FlagshipBinding,
   baseContext: OpenFeatureEvaluationContext = {},

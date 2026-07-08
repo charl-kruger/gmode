@@ -7,9 +7,13 @@ import type { GatewayMiddleware, GatewayRequestContext } from "../types";
 
 export const SHIELD_SESSION_HEADER = "cf-session-id";
 
+/** Options for emitting a stable session header for Cloudflare API Shield. */
 export type SessionHeaderOptions<Env> = {
+  /** Header name to emit. Defaults to `cf-session-id`. */
   header?: string;
+  /** Optional HMAC secret or env resolver used to avoid exposing raw identities. */
   secret?: EnvResolver<Env, string>;
+  /** Build the stable session key from gateway request context. */
   keyFor?: (ctx: GatewayRequestContext<Env>) => string | undefined;
 };
 
@@ -25,6 +29,12 @@ function defaultKey<Env>(ctx: GatewayRequestContext<Env>): string | undefined {
   return undefined;
 }
 
+/**
+ * Emit a stable session identifier header for downstream API Shield sessions.
+ *
+ * Use `secret` in production to hash user/API-key identifiers before writing
+ * them to the response header.
+ */
 export function sessionHeader<Env>(
   options: SessionHeaderOptions<Env> = {},
 ): GatewayMiddleware<Env> {

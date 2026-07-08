@@ -5,10 +5,20 @@ import {
 } from "@gmode/core";
 import type { GatewayMiddleware, GatewayRequestContext } from "../types";
 
+/** Options for Cloudflare's native Rate Limiting binding middleware. */
 export type CloudflareRateLimitOptions<Env, Binding extends keyof Env & string> = {
+  /** Name of the `ratelimits` binding in the gateway Worker env. */
   binding: Binding;
+  /** Per-request key used for rate-limit buckets. Defaults to tenant/user/API key/path. */
   key?: (context: GatewayRequestContext<Env>) => string;
+  /**
+   * When `true`, missing or failing bindings log and allow the request.
+   *
+   * Keep `false` in production when rate limiting is mandatory. Use `true`
+   * for local development when Wrangler does not provide the binding.
+   */
   failOpen?: boolean;
+  /** Optional hook invoked immediately before a `429` is thrown. */
   onLimited?: (
     context: GatewayRequestContext<Env>,
   ) => void | Promise<void>;
@@ -28,6 +38,12 @@ function defaultKey<Env>(context: GatewayRequestContext<Env>): string {
   return "anonymous";
 }
 
+/**
+ * Enforce Cloudflare's native Rate Limiting binding before service forwarding.
+ *
+ * Configure the binding in `wrangler.jsonc` under `ratelimits`, then pass the
+ * binding name from your strongly typed `Env`.
+ */
 export function cloudflareRateLimit<
   Env,
   Binding extends keyof Env & string,

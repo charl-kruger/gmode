@@ -1,5 +1,8 @@
+/** Options for object redaction. */
 export type RedactOptions = {
+  /** Replacement value used for matched paths. Defaults to `[REDACTED]`. */
   placeholder?: string;
+  /** Remove matched keys entirely instead of replacing values. */
   removeKeys?: boolean;
 };
 
@@ -12,6 +15,11 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   );
 }
 
+/**
+ * Redact dot-paths from plain objects and arrays without mutating the input.
+ *
+ * Supports `*` as a path segment wildcard, for example `users.*.email`.
+ */
 export function redact<T>(
   value: T,
   paths: readonly string[],

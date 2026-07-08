@@ -1,14 +1,26 @@
 import type { GatewayMiddleware, GatewayRequestContext } from "../types";
 
+/** Options for the gateway CORS middleware. */
 export type CorsOptions<Env> = {
+  /**
+   * Allowed origins.
+   *
+   * Use `"*"` for public APIs, an allow-list for fixed origins, or a resolver
+   * when origin decisions depend on the request context.
+   */
   origins?:
     | string[]
     | "*"
     | ((origin: string | null, context: GatewayRequestContext<Env>) => boolean);
+  /** Methods returned from preflight responses. */
   methods?: string[];
+  /** Request headers allowed by preflight responses. */
   headers?: string[];
+  /** Response headers browsers may expose to client code. */
   exposeHeaders?: string[];
+  /** Whether to emit `access-control-allow-credentials: true`. */
   credentials?: boolean;
+  /** Optional preflight max age, in seconds. */
   maxAge?: number;
 };
 
@@ -42,6 +54,12 @@ function resolveOrigin<Env>(
   return null;
 }
 
+/**
+ * Add CORS preflight handling and response headers to gateway requests.
+ *
+ * Mount near the start of the middleware chain so `OPTIONS` preflight requests
+ * can return before auth and service forwarding.
+ */
 export function cors<Env>(options?: CorsOptions<Env>): GatewayMiddleware<Env> {
   const resolved = {
     origins: options?.origins ?? "*",

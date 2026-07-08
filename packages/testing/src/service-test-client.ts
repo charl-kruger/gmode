@@ -5,18 +5,26 @@ import {
 } from "@gmode/core";
 import { createExecutionContext } from "./mock-fetcher";
 
+/** Minimal service runtime shape accepted by `createServiceTestClient()`. */
 export type ServiceLike<Env> = {
   fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response>;
 };
 
+/** Options for service test clients. */
 export type ServiceTestClientOptions = {
+  /** Base URL used when resolving relative paths. Defaults to `https://service.test`. */
   baseUrl?: string;
+  /** Gateway context fields to encode into `x-gmode-context` for trusted services. */
   gatewayContext?: Partial<GatewayContext> & { aud?: string; };
 };
 
+/** Convenience client for invoking a service in unit tests. */
 export type ServiceTestClient<Env> = {
+  /** Send an arbitrary request path through the service. */
   fetch(path: string, init?: RequestInit): Promise<Response>;
+  /** Send a GET request through the service. */
   get(path: string, init?: RequestInit): Promise<Response>;
+  /** Send a JSON POST request through the service. */
   post(
     path: string,
     body?: unknown,
@@ -24,9 +32,19 @@ export type ServiceTestClient<Env> = {
   ): Promise<Response>;
 };
 
+/**
+ * Create a small test client around a service object.
+ *
+ * When `options.gatewayContext` is provided, the client encodes a private
+ * gateway context header so services with `trustGateway` can be tested without
+ * starting a real gateway.
+ */
 export function createServiceTestClient<Env>(input: {
+  /** Service under test. */
   service: ServiceLike<Env>;
+  /** Env bindings passed to every request. */
   env: Env;
+  /** Optional base URL and gateway context setup. */
   options?: ServiceTestClientOptions;
 }): ServiceTestClient<Env> {
   const baseUrl = input.options?.baseUrl ?? "https://service.test";

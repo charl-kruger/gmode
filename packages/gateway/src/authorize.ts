@@ -17,8 +17,11 @@ import type {
  */
 export const GATEWAY_INTERNALS_STATE_KEY = "gmode.gateway.internals";
 
+/** Read-only gateway internals exposed to trusted framework middleware. */
 export type GatewayInternalsHandle<Env = unknown> = {
+  /** Registered services and API versions. Treat as read-only. */
   services: ReadonlyArray<GatewayServiceEntry<Env>>;
+  /** Resolved gateway defaults used by the route dispatcher. */
   defaults: ResolvedGatewayDefaults;
 };
 
@@ -41,9 +44,13 @@ export function getGatewayInternals<Env>(
  * the same auth/scope/permission gates without re-implementing the rules.
  */
 export type AnyServiceConfig = {
+  /** Public mount prefix. */
   mount: `/${string}`;
+  /** Whether auth is required for this service. */
   auth?: boolean;
+  /** Scopes required before dispatch. */
   scopes?: string[];
+  /** Permissions required before dispatch. */
   permissions?: string[];
 };
 

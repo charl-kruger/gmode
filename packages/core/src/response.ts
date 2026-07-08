@@ -8,6 +8,7 @@ function mergeJsonHeaders(headers?: HeadersInit): Headers {
   return merged;
 }
 
+/** Create a JSON response with `application/json; charset=utf-8`. */
 export function json<T>(
   data: T,
   status: number = 200,
@@ -19,18 +20,22 @@ export function json<T>(
   });
 }
 
+/** Create a JSON `200 OK` response. */
 export function ok<T>(data: T, headers?: HeadersInit): Response {
   return json(data, 200, headers);
 }
 
+/** Create a JSON `201 Created` response. */
 export function created<T>(data: T, headers?: HeadersInit): Response {
   return json(data, 201, headers);
 }
 
+/** Create a JSON `202 Accepted` response. */
 export function accepted<T>(data: T, headers?: HeadersInit): Response {
   return json(data, 202, headers);
 }
 
+/** Create a `204 No Content` response. */
 export function noContent(headers?: HeadersInit): Response {
   return new Response(null, {
     status: 204,
@@ -38,12 +43,14 @@ export function noContent(headers?: HeadersInit): Response {
   });
 }
 
+/** Pagination metadata returned by `paginated()`. */
 export type Pagination = {
   nextCursor?: string;
   previousCursor?: string;
   hasMore: boolean;
 };
 
+/** Create a JSON `200 OK` response shaped as `{ data, pagination }`. */
 export function paginated<T>(
   data: T[],
   pagination: Pagination,

@@ -1,6 +1,7 @@
 import { ApiError } from "@gmode/core";
 import type { GatewayMiddleware, GatewayRequestContext } from "../types";
 
+/** Request sent to a `DurableObjectRateLimiter` instance. */
 export type DurableObjectRateLimitInput = {
   key: string;
   limit: number;
@@ -8,6 +9,7 @@ export type DurableObjectRateLimitInput = {
   now?: number;
 };
 
+/** Result returned by a `DurableObjectRateLimiter` instance. */
 export type DurableObjectRateLimitResult = {
   success: boolean;
   key: string;
@@ -17,19 +19,27 @@ export type DurableObjectRateLimitResult = {
   retryAfter: number;
 };
 
+/** RPC interface implemented by the Durable Object rate limiter stub. */
 export type DurableObjectRateLimiterStub = {
   limit(input: DurableObjectRateLimitInput): Promise<DurableObjectRateLimitResult>;
 };
 
+/** Durable Object namespace binding shape required by `durableObjectRateLimit()`. */
 export type DurableObjectRateLimiterNamespace = {
   getByName(name: string): DurableObjectRateLimiterStub;
 };
 
+/** Options for a fixed-window Durable Object rate limiter. */
 export type DurableObjectRateLimitOptions<Env, Binding extends keyof Env & string> = {
+  /** Durable Object namespace binding name in the gateway Worker env. */
   binding: Binding;
+  /** Per-request bucket key. Include tenant/user identifiers for authenticated APIs. */
   key: (context: GatewayRequestContext<Env>) => string;
+  /** Max requests allowed during `periodSeconds`. */
   limit: number;
+  /** Fixed-window length in seconds. */
   periodSeconds: number;
+  /** Optional prefix for Durable Object names to separate policies. */
   namespace?: string;
 };
 
@@ -49,6 +59,12 @@ type StoredWindow = {
 
 const STORAGE_KEY = "state";
 
+/**
+ * Durable Object class that stores a fixed-window request count.
+ *
+ * Export this class from your Worker and bind it in Wrangler when you want a
+ * distributed rate limit that is shared across gateway instances.
+ */
 export class DurableObjectRateLimiter {
   private readonly state: DurableObjectRateLimitState;
 
@@ -89,6 +105,9 @@ export class DurableObjectRateLimiter {
   }
 }
 
+/**
+ * Enforce a fixed-window rate limit backed by a Durable Object namespace.
+ */
 export function durableObjectRateLimit<
   Env,
   Binding extends keyof Env & string,

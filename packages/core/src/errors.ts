@@ -1,13 +1,20 @@
 import { z, ZodError } from "zod";
 
+/** Constructor input for `ApiError`. */
 export type ApiErrorInput = {
+  /** Stable machine-readable error code. */
   code: string;
+  /** Human-readable error message. */
   message: string;
+  /** HTTP status code. */
   status: number;
+  /** Optional structured details safe for callers when `expose` is true. */
   details?: unknown;
+  /** Whether this error may be exposed to clients. Defaults to `true`. */
   expose?: boolean;
 };
 
+/** Structured HTTP error used across gateway, service, RPC, and MCP flows. */
 export class ApiError extends Error {
   readonly code: string;
   readonly status: number;
@@ -26,6 +33,7 @@ export class ApiError extends Error {
   }
 }
 
+/** Convenience factories for common `ApiError` status codes. */
 export const error = {
   badRequest(
     code: string = "BAD_REQUEST",
@@ -98,6 +106,7 @@ export const error = {
   },
 };
 
+/** JSON error response shape returned by `serializeError()`. */
 export type SerializedError = {
   status: number;
   body: {
@@ -112,6 +121,12 @@ export type SerializedError = {
   };
 };
 
+/**
+ * Convert unknown thrown values into a stable JSON error body.
+ *
+ * `ApiError` keeps its status/code/message. Zod errors become
+ * `400 VALIDATION_ERROR`. Unknown errors become `500 INTERNAL_ERROR`.
+ */
 export function serializeError(input: {
   err: unknown;
   requestId?: string | undefined;
@@ -161,6 +176,7 @@ export function serializeError(input: {
   return { status: 500, body: { error: errorBody } };
 }
 
+/** JSON Schema for the standard GMode error envelope. */
 export const apiErrorJsonSchema = {
   type: "object",
   required: ["error"],
@@ -179,6 +195,7 @@ export const apiErrorJsonSchema = {
   },
 } as const;
 
+/** Zod schema for the standard GMode error envelope. */
 export const ApiErrorSchema = z.object({
   error: z.object({
     code: z.string(),

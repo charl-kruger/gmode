@@ -2,6 +2,7 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import type { RpcService } from "./service";
 import type { RpcEnvelope, RpcMethodSpec } from "./types";
 
+/** Optional HTTP handler shape that can share a WorkerEntrypoint with RPC. */
 export type HttpEntrypoint<Env> = {
   fetch(
     request: Request,
@@ -10,10 +11,19 @@ export type HttpEntrypoint<Env> = {
   ): Promise<Response>;
 };
 
+/** Options for `defineEntrypoint()`. */
 export type DefineEntrypointOptions<Env> = {
+  /** Optional HTTP service to expose through `fetch()` on the same Worker. */
   http?: HttpEntrypoint<Env>;
 };
 
+/**
+ * Convert a GMode RPC service into a Cloudflare `WorkerEntrypoint` class.
+ *
+ * Use this as the Worker default export when the Worker exposes service-binding
+ * RPC methods. Pass `{ http: service }` to expose normal HTTP routes from the
+ * same Worker.
+ */
 export function defineEntrypoint<
   Env,
   Methods extends Record<string, RpcMethodSpec>,

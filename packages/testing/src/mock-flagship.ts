@@ -4,6 +4,7 @@ import type {
   FlagshipEvaluationContext,
 } from "@gmode/core";
 
+/** Initial flag values for `createMockFlagship()`. */
 export type MockFlagshipInitial = {
   booleans?: Record<string, boolean>;
   strings?: Record<string, string>;
@@ -12,6 +13,7 @@ export type MockFlagshipInitial = {
   errors?: Record<string, FlagshipDetails<unknown>["errorCode"]>;
 };
 
+/** Recorded Flagship evaluation call. */
 export type MockFlagshipCall = {
   method: string;
   key: string;
@@ -19,6 +21,7 @@ export type MockFlagshipCall = {
   context?: FlagshipEvaluationContext | undefined;
 };
 
+/** Mock Flagship binding with setters and call recording. */
 export type MockFlagship = FlagshipBinding & {
   readonly calls: MockFlagshipCall[];
   setBoolean(key: string, value: boolean): void;
@@ -33,6 +36,7 @@ export type MockFlagship = FlagshipBinding & {
   reset(): void;
 };
 
+/** Create a mock Cloudflare Flagship binding for gateway/service tests. */
 export function createMockFlagship(
   initial: MockFlagshipInitial = {},
 ): MockFlagship {

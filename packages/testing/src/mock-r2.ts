@@ -1,3 +1,4 @@
+/** Stored object inside `createMockR2Bucket()`. */
 export type MockR2Object = {
   key: string;
   body: Uint8Array;
@@ -6,12 +7,14 @@ export type MockR2Object = {
   uploaded: Date;
 };
 
+/** R2 object body returned by mock `get()`. */
 export type MockR2ObjectBody = MockR2Object & {
   text(): Promise<string>;
   arrayBuffer(): Promise<ArrayBuffer>;
   json<T = unknown>(): Promise<T>;
 };
 
+/** R2 list result returned by the mock bucket. */
 export type MockR2ListResult = {
   objects: MockR2Object[];
   truncated: boolean;
@@ -19,6 +22,7 @@ export type MockR2ListResult = {
   cursor?: string;
 };
 
+/** In-memory R2 bucket mock with an inspectable `objects` map. */
 export type MockR2Bucket = {
   readonly objects: Map<string, MockR2Object>;
   get(key: string): Promise<MockR2ObjectBody | null>;
@@ -39,6 +43,7 @@ export type MockR2Bucket = {
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+/** Create an in-memory R2 bucket mock for tests. */
 export function createMockR2Bucket(): MockR2Bucket {
   const objects = new Map<string, MockR2Object>();
   return {

@@ -10,20 +10,33 @@ import type {
   RegisteredGatewayServiceConfig,
 } from "./types";
 
+/** Input for the low-level Worker service-binding forwarding helper. */
 export type ForwardInput<Env> = {
+  /** Original public gateway request. */
   request: Request;
+  /** Gateway Worker env bindings. */
   env: Env;
+  /** Resolved downstream service configuration. */
   service: RegisteredGatewayServiceConfig<Env>;
+  /** Service name used for diagnostics. */
   serviceName: string;
+  /** Internal URL sent to the service binding. */
   rewrittenUrl: URL;
+  /** Private gateway context to encode into `x-gmode-context`. */
   gatewayContext: GatewayContext;
+  /** Gateway request context. */
   context: GatewayRequestContext<Env>;
+  /** Additional trusted headers to add after user `x-gmode-*` headers are stripped. */
   extraHeaders?: HeadersInit;
+  /** Optional Cloudflare Workers cache policy for this forwarded request. */
   cache?: ForwardCachePolicy;
 };
 
+/** Cloudflare Workers cache policy passed to service-binding `fetch()`. */
 export type ForwardCachePolicy = {
+  /** Value passed to `cf.cacheControl`. */
   cacheControl: string;
+  /** Optional value passed to `cf.cacheKey`. */
   cacheKey?: string;
 };
 
@@ -33,6 +46,13 @@ function isFetcherLike(value: unknown): value is FetcherLike {
     typeof (value as Record<string, unknown>)["fetch"] === "function";
 }
 
+/**
+ * Forward a gateway request to a private Worker service binding.
+ *
+ * This helper strips user-supplied `x-gmode-*` headers, injects the private
+ * gateway context, preserves the request body, and optionally applies
+ * Cloudflare Workers cache settings.
+ */
 export async function forwardToService<Env>(
   input: ForwardInput<Env>,
 ): Promise<Response> {

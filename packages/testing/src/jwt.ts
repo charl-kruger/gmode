@@ -5,6 +5,7 @@ import {
   type GatewayContext,
 } from "@gmode/core";
 
+/** Claims accepted by `createTestJwt()`. */
 export type TestJwtClaims = Record<string, unknown> & {
   sub?: string;
   exp?: number;
@@ -14,6 +15,7 @@ export type TestJwtClaims = Record<string, unknown> & {
   permissions?: string[];
 };
 
+/** Create an HS256 JWT for gateway auth tests. */
 export async function createTestJwt(
   claims: TestJwtClaims,
   secret: string,
@@ -32,6 +34,12 @@ export async function createTestJwt(
   return `${headerB64}.${payloadB64}.${signature}`;
 }
 
+/**
+ * Create an encoded private gateway context header value for tests.
+ *
+ * Use this for unit tests that call services or RPC methods without going
+ * through the gateway.
+ */
 export function createTestGatewayContext(
   context: Partial<GatewayContext> & { aud: string; requestId: string; },
 ): string {

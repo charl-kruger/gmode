@@ -13,13 +13,24 @@ export const FLAGS_BINDING_NAME_STATE_KEY = "gmode.flagsBindingName";
 export const FLAGS_GATES_STATE_KEY = "gmode.flagsGates";
 export const FLAGS_BINDING_MISSING_STATE_KEY = "gmode.flagsBindingMissing";
 
+/** Options for gateway integration with Cloudflare Flagship. */
 export type FeatureFlagsOptions<Env, Binding extends keyof Env & string> = {
+  /** Name of the Flagship binding in the gateway Worker env. */
   binding: Binding;
+  /** Override the default evaluation context built from auth and request id. */
   contextBuilder?: (
     ctx: GatewayRequestContext<Env>,
   ) => FlagshipEvaluationContext;
+  /**
+   * Flag keys whose values should be forwarded to downstream services.
+   *
+   * Forwarded values are encoded in the private gateway context rather than
+   * sent as user-controlled public headers.
+   */
   forward?: string[] | ((ctx: GatewayRequestContext<Env>) => string[]);
+  /** Map gateway mount prefixes to boolean flag keys that enable those mounts. */
   gates?: Record<string, string>;
+  /** Response behavior when a gate flag is off. Defaults to `404`. */
   gateBehavior?: "404" | "503";
   /**
    * When the Flagship binding is missing at runtime (common in `wrangler dev`
@@ -51,6 +62,12 @@ function pathMatchesMount(pathname: string, mount: string): boolean {
   return pathname === normalized || pathname.startsWith(`${normalized}/`);
 }
 
+/**
+ * Attach a Flagship client to the gateway request and optionally gate mounts.
+ *
+ * Downstream services can read forwarded flag values from `context.gateway.flags`
+ * after the gateway forwards the private context.
+ */
 export function featureFlags<Env, Binding extends keyof Env & string>(
   options: FeatureFlagsOptions<Env, Binding>,
 ): GatewayMiddleware<Env> {

@@ -5,6 +5,7 @@ import type {
   RpcResult,
 } from "./types";
 
+/** Friendly caller-side client shape returned by `createRpcClient()`. */
 export type RpcClientCallable<Methods extends Record<string, RpcMethodSpec>> = {
   [K in keyof Methods]: (
     input: Methods[K]["input"],
@@ -17,8 +18,16 @@ type RpcBindingShape<Methods extends Record<string, RpcMethodSpec>> = {
   ) => Promise<RpcResult<Methods[K]["output"]>>;
 };
 
+/** Options for `createRpcClient()`. */
 export type CreateRpcClientInput<Methods extends Record<string, RpcMethodSpec>> = {
+  /** Cloudflare Worker service binding typed as `typeof rpc.client`. */
   binding: RpcBindingShape<Methods>;
+  /**
+   * Optional private gateway context token to forward with each RPC call.
+   *
+   * In HTTP handlers, pass a resolver that reads `x-gmode-context` from the
+   * incoming request so downstream RPC methods inherit the gateway identity.
+   */
   context?: string | (() => string | undefined);
 };
 
@@ -43,6 +52,12 @@ function rehydrateError(payload: {
   });
 }
 
+/**
+ * Create a typed caller-side RPC client from a Worker service binding.
+ *
+ * The returned object exposes each RPC method as `client.method(input)` and
+ * rethrows server-side RPC errors as `ApiError`.
+ */
 export function createRpcClient<
   Methods extends Record<string, RpcMethodSpec>,
 >(
