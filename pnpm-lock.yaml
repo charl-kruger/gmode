@@ -33,6 +33,72 @@ importers:
         specifier: 4.107.0
         version: 4.107.0(@cloudflare/workers-types@5.20260706.1)
 
+  examples/gateway-basic/billing-api:
+    dependencies:
+      '@gmode/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@gmode/rpc':
+        specifier: workspace:*
+        version: link:../../../packages/rpc
+      '@gmode/service':
+        specifier: workspace:*
+        version: link:../../../packages/service
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: 5.20260706.1
+        version: 5.20260706.1
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      wrangler:
+        specifier: 4.107.0
+        version: 4.107.0(@cloudflare/workers-types@5.20260706.1)
+
+  examples/gateway-basic/gateway:
+    dependencies:
+      '@gmode/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@gmode/gateway':
+        specifier: workspace:*
+        version: link:../../../packages/gateway
+      '@gmode/mcp':
+        specifier: workspace:*
+        version: link:../../../packages/mcp
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: 5.20260706.1
+        version: 5.20260706.1
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      wrangler:
+        specifier: 4.107.0
+        version: 4.107.0(@cloudflare/workers-types@5.20260706.1)
+
+  examples/gateway-basic/users-api:
+    dependencies:
+      '@gmode/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@gmode/rpc':
+        specifier: workspace:*
+        version: link:../../../packages/rpc
+      '@gmode/service':
+        specifier: workspace:*
+        version: link:../../../packages/service
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: 5.20260706.1
+        version: 5.20260706.1
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      wrangler:
+        specifier: 4.107.0
+        version: 4.107.0(@cloudflare/workers-types@5.20260706.1)
+
   packages/cli:
     dependencies:
       '@gmode/core':
