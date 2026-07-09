@@ -6,19 +6,30 @@ This example shows a public Gateway Worker and two private Service Workers
 ## Run locally
 
 Each Worker has its own `wrangler.jsonc`. In production they are three separate
-Cloudflare Workers wired through Service Bindings. For local development, you
-typically run each one in its own terminal:
+Cloudflare Workers wired through Service Bindings. For local development, the
+recommended path is one Wrangler session with the gateway as the primary Worker
+and the services as auxiliary Workers. That keeps the gateway fixed at
+`http://127.0.0.1:8787`.
 
 ```bash
-# Terminal 1
-cd users-api && cp .dev.vars.example .dev.vars && pnpm dev
+cp users-api/.dev.vars.example users-api/.dev.vars
+cp billing-api/.dev.vars.example billing-api/.dev.vars
+cp gateway/.dev.vars.example gateway/.dev.vars
 
-# Terminal 2
-cd billing-api && cp .dev.vars.example .dev.vars && pnpm dev
-
-# Terminal 3
-cd gateway && cp .dev.vars.example .dev.vars && pnpm dev
+cd gateway && pnpm dev:all
 ```
+
+The first config in `dev:all` is the gateway, so it is the only Worker exposed
+over HTTP. The users and billing Workers are available through service bindings.
+
+If you prefer three terminals, run each package's `pnpm dev` script separately.
+Those scripts pin ports as follows:
+
+| Worker | URL |
+|---|---|
+| Gateway | `http://127.0.0.1:8787` |
+| Users API | `http://127.0.0.1:8788` |
+| Billing API | `http://127.0.0.1:8789` |
 
 The example `wrangler.jsonc` files run `pnpm build:deps` before Wrangler
 bundles each Worker. That builds the local `@gmode/*` workspace packages so
@@ -29,7 +40,15 @@ Then hit the gateway:
 ```bash
 curl http://127.0.0.1:8787/users/123
 curl http://127.0.0.1:8787/openapi.json
+curl http://127.0.0.1:8787/openapi.json?profile=shield
 ```
+
+Open Swagger UI at `http://127.0.0.1:8787/docs`. The page loads the same
+gateway-owned spec from `/openapi.json`.
+
+If `/openapi.json` returns an error, one of the downstream service bindings is
+not connected. The gateway does not silently omit a service from the aggregate
+spec; start both downstream Workers first and restart the gateway.
 
 ## MCP Inspector
 
