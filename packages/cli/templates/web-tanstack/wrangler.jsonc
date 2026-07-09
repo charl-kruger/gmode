@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "__WORKER_NAME__",
+  "main": "src/server.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // Private web app: reached through the gateway's Service Binding.
+  "workers_dev": false,
+  "observability": {
+    "enabled": true
+  }
+}

@@ -2,11 +2,12 @@ import {
   ApiError,
   buildFlagshipContext,
   createFlagsClient,
-  decodeGatewayContext,
   error as errorFactory,
   matchesAllScopes,
+  readContextSecret,
   resolveEnvValue,
   serializeError,
+  verifyGatewayContext,
   type FlagsClient,
   type FlagshipBinding,
   type GatewayContext,
@@ -140,7 +141,10 @@ class RpcServiceImpl<Env> {
     }
 
     try {
-      const gatewayContext = this.resolveGatewayContext(envelope.context);
+      const gatewayContext = await this.resolveGatewayContext(
+        envelope.context,
+        env,
+      );
 
       this.assertScopes(config, gatewayContext);
 
@@ -175,9 +179,10 @@ class RpcServiceImpl<Env> {
     }
   }
 
-  private resolveGatewayContext(
+  private async resolveGatewayContext(
     token: string | undefined,
-  ): GatewayContext {
+    env: Env,
+  ): Promise<GatewayContext> {
     const trust = this.options.trustGateway;
     if (!trust) {
       return anonymousGatewayContext(this.name);
@@ -192,8 +197,13 @@ class RpcServiceImpl<Env> {
         status: 401,
       });
     }
-    return decodeGatewayContext(token, {
+    const secret = trust.secret ? trust.secret(env) : readContextSecret(env);
+    return verifyGatewayContext(token, {
       audience: trust.audience,
+      ...(secret ? { secret } : {}),
+      ...(trust.allowUnsigned !== undefined
+        ? { allowUnsigned: trust.allowUnsigned }
+        : {}),
     });
   }
 

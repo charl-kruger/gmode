@@ -21,6 +21,7 @@ type Env = {
   API_RATE_LIMITER: CloudflareRateLimitBinding;
   FLAGS: FlagshipBinding;
   JWT_SECRET: string;
+  GMODE_CONTEXT_SECRET?: string;
 };
 
 const gateway = createGateway<Env>({

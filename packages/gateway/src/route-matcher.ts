@@ -33,9 +33,7 @@ export function matchService<Env>(
     const mount = normalizeMount(service.config.mount);
 
     if (mount === "/") {
-      const rewritten =
-        service.config.stripPrefix === false ? pathname : pathname;
-      return { service, rewrittenPath: rewritten };
+      return { service, rewrittenPath: pathname };
     }
 
     if (pathname === mount || pathname.startsWith(`${mount}/`)) {

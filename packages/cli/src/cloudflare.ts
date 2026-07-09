@@ -1,4 +1,4 @@
-import type { CliEnv } from "./types";
+
 import type { ShieldSchemaAction } from "@gmode/core";
 
 const BASE = "https://api.cloudflare.com/client/v4";

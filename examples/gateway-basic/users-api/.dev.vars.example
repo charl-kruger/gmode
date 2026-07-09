@@ -1,1 +1,2 @@
-# No local secrets required.
+# Must match the gateway's GMODE_CONTEXT_SECRET.
+GMODE_CONTEXT_SECRET=dev-secret-change-me

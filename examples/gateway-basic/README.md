@@ -16,6 +16,10 @@ cp users-api/.dev.vars.example users-api/.dev.vars
 cp billing-api/.dev.vars.example billing-api/.dev.vars
 cp gateway/.dev.vars.example gateway/.dev.vars
 
+The gateway `wrangler.jsonc` lists `GMODE_CONTEXT_SECRET` under `secrets.required`
+so Wrangler injects it from `.dev.vars` alongside `JWT_SECRET`. Services need
+the same value in their `.dev.vars` (must match the gateway).
+
 cd gateway && pnpm dev
 ```
 

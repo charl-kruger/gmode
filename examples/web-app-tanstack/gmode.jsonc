@@ -1,0 +1,28 @@
+{
+  "$schema": "../../packages/cli/gmode.schema.json",
+  "name": "gmode-example-web",
+  "gateway": {
+    "path": "./gateway",
+    "port": 8787
+  },
+  "services": [
+    {
+      "name": "users",
+      "path": "./users-api",
+      "mount": "/users"
+    }
+  ],
+  "webApps": [
+    {
+      "name": "dashboard",
+      "path": "./dashboard",
+      "mount": "/app",
+      "framework": "tanstack-start",
+      "devPort": 5173,
+      "api": {
+        "mount": "/api",
+        "openapi": true
+      }
+    }
+  ]
+}

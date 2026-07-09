@@ -34,6 +34,8 @@ export {
   GMODE_HEADERS,
   PUBLIC_REQUEST_ID_HEADER,
   GMODE_HEADER_PREFIX,
+  GMODE_CONTEXT_SECRET_VAR,
+  readContextSecret,
   stripGModeHeaders,
 } from "./context";
 
@@ -56,7 +58,10 @@ export {
   paginated,
 } from "./response";
 
-export type { DecodeGatewayContextOptions } from "./crypto";
+export type {
+  DecodeGatewayContextOptions,
+  VerifyGatewayContextOptions,
+} from "./crypto";
 export {
   base64urlEncode,
   base64urlEncodeString,
@@ -65,7 +70,9 @@ export {
   hmacSign,
   hmacVerify,
   encodeGatewayContext,
+  encodeSignedGatewayContext,
   decodeGatewayContext,
+  verifyGatewayContext,
 } from "./crypto";
 
 export { matchesScope, matchesAllScopes, isValidRequestId } from "./utils";

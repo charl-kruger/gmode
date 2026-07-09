@@ -1,11 +1,25 @@
 import { bootstrapShield } from "./commands/bootstrap-shield";
+import { deploy } from "./commands/deploy";
+import { dev } from "./commands/dev";
 import { diffDiscovered } from "./commands/diff-discovered";
+import { doctor } from "./commands/doctor";
+import { generate } from "./commands/generate";
+import { init } from "./commands/init";
+import { newEntry } from "./commands/new";
 import { pushSchema } from "./commands/push-schema";
+import { sync } from "./commands/sync";
 import { syncSchemaActions } from "./commands/sync-schema-actions";
 import { syncSequences } from "./commands/sync-sequences";
 import type { CliEnv, CommandRunner } from "./types";
 
 const COMMANDS: Record<string, CommandRunner> = {
+  init,
+  new: newEntry,
+  dev,
+  deploy,
+  sync,
+  doctor,
+  generate,
   "shield:push-schema": pushSchema,
   "shield:bootstrap": bootstrapShield,
   "shield:diff-discovered": diffDiscovered,
@@ -13,21 +27,36 @@ const COMMANDS: Record<string, CommandRunner> = {
   "shield:sync-sequences": syncSequences,
 };
 
-const HELP = `gmode — Cloudflare API platform helper
+const HELP = `gmode — the Cloudflare Workers app platform CLI
 
 Usage: gmode <command> [options]
 
-Commands:
-  shield:push-schema       Upload /openapi.json?profile=shield to Cloudflare Schema Validation
-  shield:bootstrap         Prune a Shield schema from discovered public traffic and optionally upload it
-  shield:diff-discovered   Diff your spec against Shield's traffic-discovered endpoints
-  shield:sync-schema-actions Apply per-endpoint API Shield schema validation actions
-  shield:sync-sequences    Sync a defineSequences() policy to Cloudflare (or export to JSON)
+Workspace:
+  init [dir] [--name app]  Create a new GMode workspace (manifest + gateway)
+  new service <name>       Scaffold a private API service and register it
+  new web <name>           Scaffold a web app (--framework tanstack-start|vite-react)
+  sync                     Sync gmode.jsonc -> wrangler bindings + generated code
+  doctor                   Validate manifest, bindings, secrets, and drift
+
+Develop & ship:
+  dev                      Run gateway, services, web apps, and the dev dashboard
+                           (--port, --dashboard-port, --no-dashboard)
+  deploy                   Deploy services first, gateway last (--env, --dry-run)
+  generate client          Generate a typed TypeScript client from OpenAPI
+                           (--url <openapi-url> | --spec <file>) [--out <dir>]
+  generate types           Run wrangler types for every worker + re-sync
+
+Cloudflare API Shield:
+  shield:push-schema       Upload /openapi.json?profile=shield to Schema Validation
+  shield:bootstrap         Prune a Shield schema from discovered public traffic
+  shield:diff-discovered   Diff your spec against Shield's discovered endpoints
+  shield:sync-schema-actions Apply per-endpoint schema validation actions
+  shield:sync-sequences    Sync a defineSequences() policy to Cloudflare
 
 Common options:
-  --config <path>          Path to gmode.config.json (default: ./gmode.config.json)
+  --config <path>          Path to gmode.config.json (Shield commands only)
 
-Env vars:
+Env vars (Shield commands):
   CLOUDFLARE_API_TOKEN     Required
   CLOUDFLARE_ZONE_ID       Required
 

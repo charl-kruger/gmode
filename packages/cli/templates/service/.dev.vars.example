@@ -1,0 +1,2 @@
+# Must match the gateway's GMODE_CONTEXT_SECRET (`gmode sync` copies it here).
+GMODE_CONTEXT_SECRET=dev-secret-change-me

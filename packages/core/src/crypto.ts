@@ -99,9 +99,28 @@ export async function hmacVerify(
  * This is intentionally not a public auth token. It is used after the gateway
  * has selected a private Worker binding and is paired with
  * `decodeGatewayContext()` on the service side.
+ *
+ * Prefer `encodeSignedGatewayContext()` when a shared context secret is
+ * configured; unsigned tokens rely entirely on Service Bindings staying
+ * private.
  */
 export function encodeGatewayContext(context: GatewayContext): string {
   return base64urlEncodeString(JSON.stringify(context));
+}
+
+/**
+ * Encode and HMAC-SHA256 sign private gateway context.
+ *
+ * Format is `base64url(payload) + "." + base64url(hmacSha256(payload))`.
+ * Services verify with `verifyGatewayContext()` using the same secret.
+ */
+export async function encodeSignedGatewayContext(
+  context: GatewayContext,
+  secret: string,
+): Promise<string> {
+  const payload = base64urlEncodeString(JSON.stringify(context));
+  const signature = await hmacSign(secret, payload);
+  return `${payload}.${signature}`;
 }
 
 /** Options for decoding private gateway context. */
@@ -247,20 +266,10 @@ function parseGatewayContextValue(value: unknown): GatewayContext {
   return context;
 }
 
-/**
- * Decode and validate private gateway context.
- *
- * Throws `ApiError` when the payload shape, issuer, audience, issued time, or
- * expiry is invalid.
- */
-export function decodeGatewayContext(
-  token: string,
-  options: DecodeGatewayContextOptions,
-): GatewayContext {
-  let parsed: GatewayContext;
+function decodePayloadSegment(payload: string): GatewayContext {
   try {
-    const decoded = base64urlDecodeToString(token);
-    parsed = parseGatewayContextValue(JSON.parse(decoded));
+    const decoded = base64urlDecodeToString(payload);
+    return parseGatewayContextValue(JSON.parse(decoded));
   } catch (err) {
     if (err instanceof ApiError) {
       throw err;
@@ -271,7 +280,12 @@ export function decodeGatewayContext(
       status: 401,
     });
   }
+}
 
+function validateGatewayContextClaims(
+  parsed: GatewayContext,
+  options: DecodeGatewayContextOptions,
+): GatewayContext {
   const expectedIssuer = options.issuer ?? "gmode-gateway";
   if (parsed.iss !== expectedIssuer) {
     throw new ApiError({
@@ -312,4 +326,79 @@ export function decodeGatewayContext(
   }
 
   return parsed;
+}
+
+/**
+ * Decode and validate an unsigned private gateway context token.
+ *
+ * Throws `ApiError` when the payload shape, issuer, audience, issued time, or
+ * expiry is invalid. Signed tokens (containing a `.` signature segment) are
+ * rejected; use `verifyGatewayContext()` to support both formats.
+ */
+export function decodeGatewayContext(
+  token: string,
+  options: DecodeGatewayContextOptions,
+): GatewayContext {
+  const parsed = decodePayloadSegment(token);
+  return validateGatewayContextClaims(parsed, options);
+}
+
+/** Options for verifying private gateway context, signed or unsigned. */
+export type VerifyGatewayContextOptions = DecodeGatewayContextOptions & {
+  /**
+   * Shared HMAC secret. When set, signed tokens are verified against it and
+   * unsigned tokens are rejected unless `allowUnsigned` is `true`.
+   */
+  secret?: string;
+  /** Accept unsigned tokens even when `secret` is configured. Defaults to `false`. */
+  allowUnsigned?: boolean;
+};
+
+/**
+ * Verify and decode private gateway context, supporting signed tokens.
+ *
+ * - Signed token (`payload.signature`) with `secret`: HMAC verified, then decoded.
+ * - Signed token without `secret`: rejected — the service is missing its secret.
+ * - Unsigned token with `secret`: rejected unless `allowUnsigned` is `true`.
+ * - Unsigned token without `secret`: decoded like `decodeGatewayContext()`.
+ */
+export async function verifyGatewayContext(
+  token: string,
+  options: VerifyGatewayContextOptions,
+): Promise<GatewayContext> {
+  const dot = token.indexOf(".");
+  if (dot === -1) {
+    if (options.secret && options.allowUnsigned !== true) {
+      throw new ApiError({
+        code: "UNSIGNED_GATEWAY_CONTEXT",
+        message:
+          "Gateway context is unsigned but this service requires a signed context",
+        status: 401,
+      });
+    }
+    return decodeGatewayContext(token, options);
+  }
+
+  if (!options.secret) {
+    throw new ApiError({
+      code: "INVALID_GATEWAY_CONTEXT",
+      message:
+        "Gateway context is signed but no context secret is configured on this service",
+      status: 401,
+    });
+  }
+
+  const payload = token.slice(0, dot);
+  const signature = token.slice(dot + 1);
+  const valid = await hmacVerify(options.secret, payload, signature);
+  if (!valid) {
+    throw new ApiError({
+      code: "INVALID_GATEWAY_CONTEXT_SIGNATURE",
+      message: "Gateway context signature verification failed",
+      status: 401,
+    });
+  }
+
+  const parsed = decodePayloadSegment(payload);
+  return validateGatewayContextClaims(parsed, options);
 }

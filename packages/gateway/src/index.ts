@@ -12,6 +12,8 @@ export type {
   GatewayVersion,
   GatewayMiddleware,
   GatewayRequestContext,
+  GatewayWebConfig,
+  GatewayWebEntryInfo,
   RegisteredGatewayServiceConfig,
 } from "./types";
 

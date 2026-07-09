@@ -1,0 +1,17 @@
+{
+  "name": "__APP_NAME__",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "gmode dev",
+    "deploy": "gmode deploy",
+    "sync": "gmode sync",
+    "doctor": "gmode doctor",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "@gmode/cli": "^0.2.0",
+    "typescript": "^5.6.3",
+    "wrangler": "^4.107.0"
+  }
+}

@@ -19,7 +19,7 @@ export type ServiceTestClientOptions = {
 };
 
 /** Convenience client for invoking a service in unit tests. */
-export type ServiceTestClient<Env> = {
+export type ServiceTestClient<_Env> = {
   /** Send an arbitrary request path through the service. */
   fetch(path: string, init?: RequestInit): Promise<Response>;
   /** Send a GET request through the service. */

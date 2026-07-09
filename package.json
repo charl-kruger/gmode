@@ -8,6 +8,8 @@
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
+    "test:e2e": "pnpm --filter @gmode/e2e test",
+    "test:e2e:smoke": "pnpm --filter @gmode/e2e test:smoke",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "clean": "turbo run clean",
@@ -30,6 +32,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@biomejs/biome": "^2.5.2",
     "@changesets/cli": "2.31.0",
     "@cloudflare/workers-types": "5.20260706.1",
     "tsup": "^8.3.5",

@@ -85,9 +85,12 @@ describe("CLI entrypoint", () => {
 
     expect(code).toBe(0);
     expect(h.stdout.join("\n")).toMatch(
-      /gmode — Cloudflare API platform helper/,
+      /gmode — the Cloudflare Workers app platform CLI/,
     );
     expect(h.stdout.join("\n")).toContain("shield:push-schema");
+    expect(h.stdout.join("\n")).toContain("init");
+    expect(h.stdout.join("\n")).toContain("dev");
+    expect(h.stdout.join("\n")).toContain("deploy");
   });
 
   it("errors on unknown commands", async () => {

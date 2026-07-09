@@ -1,7 +1,10 @@
 import { createService, z } from "@gmode/service";
 import { createRpcClient } from "@gmode/rpc";
 import { GMODE_HEADERS } from "@gmode/core";
-import type { UsersApiRpc } from "../../users-api/src/index";
+import type {
+  UsersApiRpc,
+  UsersApiRpcMethods,
+} from "../../users-api/src/contract";
 
 type Env = {
   USERS_API: UsersApiRpc;
@@ -68,12 +71,7 @@ service.post("/invoices", {
       userId: string;
     };
 
-    const users = createRpcClient<{
-      getUserById: {
-        input: { id: string; };
-        output: { id: string; email: string; };
-      };
-    }>({
+    const users = createRpcClient<UsersApiRpcMethods>({
       binding: env.USERS_API,
       context: () =>
         request.headers.get(GMODE_HEADERS.gatewayContext) ?? undefined,

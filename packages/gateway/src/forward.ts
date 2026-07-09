@@ -1,6 +1,7 @@
 import {
   GMODE_HEADERS,
   encodeGatewayContext,
+  encodeSignedGatewayContext,
   stripGModeHeaders,
   type FetcherLike,
   type GatewayContext,
@@ -30,6 +31,17 @@ export type ForwardInput<Env> = {
   extraHeaders?: HeadersInit;
   /** Optional Cloudflare Workers cache policy for this forwarded request. */
   cache?: ForwardCachePolicy;
+  /**
+   * Shared HMAC secret used to sign the private gateway context. When absent,
+   * the context is sent unsigned (legacy mode).
+   */
+  contextSecret?: string;
+  /**
+   * Dev-mode proxy target (for example a local Vite dev server). When set,
+   * the request is sent to this base URL with plain `fetch()` instead of the
+   * Service Binding — used by `gmode dev` to preserve HMR for web apps.
+   */
+  devUrl?: string;
 };
 
 /** Cloudflare Workers cache policy passed to service-binding `fetch()`. */
@@ -71,7 +83,9 @@ export async function forwardToService<Env>(
     });
   }
 
-  const token = encodeGatewayContext(input.gatewayContext);
+  const token = input.contextSecret
+    ? await encodeSignedGatewayContext(input.gatewayContext, input.contextSecret)
+    : encodeGatewayContext(input.gatewayContext);
   headers.set(GMODE_HEADERS.gatewayContext, token);
   headers.set(GMODE_HEADERS.requestId, input.gatewayContext.requestId);
 
@@ -105,6 +119,17 @@ export async function forwardToService<Env>(
     init.body = input.request.body;
     init.duplex = "half";
   }
+
+  if (input.devUrl) {
+    // Dev proxy: rebase the internal URL onto the local dev server and use
+    // plain fetch so Vite HMR (including WebSocket upgrades) keeps working.
+    const target = new URL(input.devUrl);
+    const proxied = new URL(input.rewrittenUrl.toString());
+    proxied.protocol = target.protocol;
+    proxied.host = target.host;
+    return fetch(new Request(proxied.toString(), init));
+  }
+
   const internalRequest = new Request(input.rewrittenUrl.toString(), init);
   const binding = (input.env as Record<string, unknown>)[input.service.binding];
   if (!isFetcherLike(binding)) {

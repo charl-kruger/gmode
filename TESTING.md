@@ -47,6 +47,36 @@ pnpm build           # tsup for libraries, tsc --noEmit for example apps
 
 All three (`build`, `typecheck`, `test`) must be green before shipping.
 
+### Automated E2E smoke (`@gmode/e2e`)
+
+Live-process tests spawn `wrangler dev` / `gmode dev` and hit real HTTP endpoints.
+They cover CLI scaffolding, both examples, MCP, RPC, OpenAPI aggregation, and the
+dev dashboard.
+
+```bash
+pnpm build                        # required once
+pnpm test:e2e:smoke               # ~2 min, all smoke suites
+pnpm --filter @gmode/e2e test     # same as test:e2e
+```
+
+Suites live in `packages/e2e/src/suites/` (shared dev servers start once via
+`globalSetup` — ~80s total):
+
+| Suite | Fixture | Covers |
+|---|---|---|
+| `cli.smoke` | web-app-tanstack | `sync`, `doctor`, `generate client`, `generate types` |
+| `greenfield.smoke` | temp workspace | `init`, `new service`, `new web`, `doctor` |
+| `gateway-basic.smoke` | gateway-basic | health, users, OpenAPI, JWT, MCP, RPC, CORS |
+| `web-app-tanstack.smoke` | web-app-tanstack | `gmode dev`, SSR, embedded API, OpenAPI aggregation, codegen |
+| `dashboard.smoke` | web-app-tanstack + dashboard | `/api/state`, logs, requests, SSE |
+| `client-live.smoke` | web-app-tanstack | generated `createClient()` against live gateway |
+| `create-gmode.smoke` | temp workspace | `pnpm create gmode` wrapper → `init` |
+| `deploy.smoke` | web-app-tanstack | `deploy --dry-run` |
+| `shield.smoke` | fixtures + live OpenAPI | `shield:sync-sequences` (offline); live zone tests skip unless `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID` are set |
+
+E2E tests use dynamic ports and run sequentially. Kill stray dev processes if a
+run is interrupted: `pkill -f "wrangler dev"; pkill -f "gmode dev"`.
+
 ---
 
 ## 2. Local end-to-end with `wrangler dev`
@@ -202,6 +232,9 @@ pnpm typecheck
 pnpm test
 pnpm build
 ```
+
+A separate **E2E smoke** job (`pnpm test:e2e:smoke`, 15 min timeout) runs after
+`pnpm build`.
 
 The release workflow runs the same gate before it opens a Changesets version PR
 or publishes packages to npm. Release-specific details live in

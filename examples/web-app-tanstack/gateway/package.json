@@ -1,0 +1,22 @@
+{
+  "name": "gmode-example-web-gateway",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:deps": "../../../node_modules/.bin/turbo run build --filter=@gmode/core --filter=@gmode/gateway --filter=@gmode/rpc --filter=@gmode/service",
+    "dev": "wrangler dev --ip 127.0.0.1 --port 8787",
+    "deploy": "wrangler deploy",
+    "pretypecheck": "pnpm build:deps",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gmode/core": "workspace:*",
+    "@gmode/gateway": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260706.1",
+    "typescript": "^5.6.3",
+    "wrangler": "4.107.0"
+  }
+}

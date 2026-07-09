@@ -47,5 +47,6 @@ workflow page that matches the feature you are changing.
 ```bash
 pnpm typecheck
 pnpm test
+pnpm test:e2e:smoke   # live wrangler / gmode dev (~2 min)
 pnpm build
 ```

@@ -68,10 +68,37 @@ issuer, audience, and expiry, then expose it to handlers as `ctx.gateway`.
 Client-supplied `x-gmode-*` headers are stripped before forwarding, so
 clients cannot override the gateway-generated identity or request context.
 
-This model assumes downstream services are private Workers reached only through
+### HMAC signing
+
+Set the same `GMODE_CONTEXT_SECRET` secret on the gateway and every service
+Worker to upgrade the context header to a signed token
+(`base64url(payload).base64url(hmac-sha256)`):
+
+```bash
+# Same value on the gateway and every service
+wrangler secret put GMODE_CONTEXT_SECRET
+```
+
+No code changes are needed. When the secret is present:
+
+- the gateway signs every forwarded context with HMAC-SHA256, and
+- services reject unsigned or tampered tokens automatically.
+
+`gmode init` generates this secret into `.dev.vars` for local development.
+If your gateway `wrangler.jsonc` uses `secrets.required`, list
+`GMODE_CONTEXT_SECRET` there too — otherwise Wrangler may not inject it from
+`.dev.vars` even when the file contains the value.
+You can customize resolution with `internal.signing.secret` on
+`createGateway()` and `trustGateway.secret` on `createService()`, disable
+signing with `internal: { signing: false }`, or accept unsigned tokens during
+a rollout with `trustGateway: { allowUnsigned: true }`.
+
+Without a secret, tokens are unsigned base64url JSON. That is safe only while
+downstream services stay private Workers reached exclusively through
 Cloudflare Service Bindings. Keep `workers_dev: false` and do not attach routes
 or custom domains to service Workers. If a service must be public, protect that
-public route with its own authentication layer.
+public route with its own authentication layer — and configure the signing
+secret.
 
 ## Hidden Landing Page
 

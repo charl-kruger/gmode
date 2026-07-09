@@ -1,4 +1,5 @@
 import type { GatewayMiddleware, GatewayRequestContext } from "../types";
+import { isPassthroughResponse } from "../passthrough";
 
 /** Options for the gateway CORS middleware. */
 export type CorsOptions<Env> = {
@@ -98,16 +99,25 @@ export function cors<Env>(options?: CorsOptions<Env>): GatewayMiddleware<Env> {
     }
 
     const response = await next();
+    if (isPassthroughResponse(context, response)) {
+      return response;
+    }
     if (allowOrigin) {
-      response.headers.set("access-control-allow-origin", allowOrigin);
+      const headers = new Headers(response.headers);
+      headers.set("access-control-allow-origin", allowOrigin);
       if (resolved.credentials) {
-        response.headers.set("access-control-allow-credentials", "true");
+        headers.set("access-control-allow-credentials", "true");
       }
-      response.headers.set(
+      headers.set(
         "access-control-expose-headers",
         resolved.exposeHeaders.join(", "),
       );
-      response.headers.append("vary", "origin");
+      headers.append("vary", "origin");
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
     }
     return response;
   };

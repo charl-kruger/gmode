@@ -1,8 +1,8 @@
 import {
   ApiError,
-  GMODE_HEADERS,
   PUBLIC_REQUEST_ID_HEADER,
   json,
+  readContextSecret,
   serializeError,
   toShieldCompatibleSpec,
   type AuthContext,
@@ -14,6 +14,7 @@ import {
   type AnyServiceConfig,
 } from "./authorize";
 import { forwardToService } from "./forward";
+import { fetchBindingGet, internalPathForEntry } from "./internal-fetch";
 import {
   gatewayIndexHtml,
   type GatewayIndexFlagsInfo,
@@ -48,6 +49,8 @@ import type {
   GatewayServiceConfig,
   GatewayServiceEntry,
   GatewayVersion,
+  GatewayWebConfig,
+  GatewayWebEntryInfo,
   ResolvedGatewayDefaults,
 } from "./types";
 
@@ -77,7 +80,21 @@ function buildDefaults<Env>(
     indexPath,
     tokenTtlSeconds: options.internal?.tokenTtlSeconds ?? 60,
     basePath: options.basePath ?? "",
+    openapiCacheTtlSeconds: options.docs?.openapiCacheTtlSeconds ?? 60,
   };
+}
+
+function resolveContextSecret<Env>(
+  internals: GatewayInternals<Env>,
+  env: Env,
+): string | undefined {
+  const signing = internals.options.internal?.signing;
+  if (signing === false) return undefined;
+  if (signing && typeof signing === "object") {
+    const value = signing.secret(env);
+    return typeof value === "string" && value.length > 0 ? value : undefined;
+  }
+  return readContextSecret(env);
 }
 
 function emptyAuth(): AuthContext {
@@ -265,6 +282,46 @@ function resolveDownstreamCachePolicy<Env>(
     : { cacheControl };
 }
 
+function devInspectorUrl(env: unknown): string | undefined {
+  if (!env || typeof env !== "object") return undefined;
+  const value = (env as Record<string, unknown>)["GMODE_DEV_INSPECTOR_URL"];
+  return typeof value === "string" && value ? value : undefined;
+}
+
+function emitInspectorEvent<Env>(input: {
+  inspectorUrl: string;
+  context: GatewayRequestContext<Env>;
+  status: number;
+  startedAt: number;
+  error?: string;
+}): void {
+  const { context } = input;
+  const event: Record<string, unknown> = {
+    ts: Date.now(),
+    requestId: context.requestId,
+    method: context.request.method,
+    path: context.url.pathname,
+    status: input.status,
+    durationMs: Math.max(0, Date.now() - input.startedAt),
+    authenticated: context.auth.authenticated,
+  };
+  if (context.matchedService) {
+    event["matchedService"] = context.matchedService.name;
+  }
+  if (context.auth.user?.id) event["subject"] = context.auth.user.id;
+  if (context.auth.scopes.length > 0) event["scopes"] = context.auth.scopes;
+  if (input.error) event["error"] = input.error;
+
+  // Fire-and-forget: dev telemetry must never affect request handling.
+  context.executionContext.waitUntil(
+    fetch(input.inspectorUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(event),
+    }).catch(() => {}),
+  );
+}
+
 async function handleRequest<Env>(
   request: Request,
   env: Env,
@@ -296,20 +353,114 @@ async function handleRequest<Env>(
     return route(context, internals);
   };
 
+  const inspectorUrl = devInspectorUrl(env);
+  const startedAt = Date.now();
+
   try {
     if (!context.requestId) {
       context.requestId = crypto.randomUUID();
     }
-    return await dispatch(0);
+    const response = await dispatch(0);
+    if (inspectorUrl) {
+      emitInspectorEvent({
+        inspectorUrl,
+        context,
+        status: response.status,
+        startedAt,
+      });
+    }
+    return response;
   } catch (err) {
     const { status, body } = serializeError({
       err,
       requestId: context.requestId,
     });
+    if (inspectorUrl) {
+      emitInspectorEvent({
+        inspectorUrl,
+        context,
+        status,
+        startedAt,
+        error: body.error.message,
+      });
+    }
     return json(body, status, {
       [PUBLIC_REQUEST_ID_HEADER]: context.requestId,
     });
   }
+}
+
+type ServiceHealth = {
+  name: string;
+  mount: string;
+  ok: boolean;
+  status?: number;
+  error?: string;
+};
+
+async function checkServiceHealth<Env>(
+  entry: GatewayServiceEntry<Env>,
+  env: Env,
+): Promise<ServiceHealth> {
+  const base: ServiceHealth = {
+    name: entry.name,
+    mount: entry.config.mount,
+    ok: false,
+  };
+
+  const healthPath = internalPathForEntry(entry, "/__gmode/health");
+
+  // Web apps in dev may still expose an explicit dev URL override.
+  const devUrl = entry.kind === "web" ? entry.web?.devUrl?.(env) : undefined;
+  if (devUrl) {
+    try {
+      const res = await fetch(new URL(healthPath, devUrl).toString());
+      return { ...base, ok: res.ok, status: res.status };
+    } catch (err) {
+      return {
+        ...base,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  try {
+    const res = await fetchBindingGet(entry, env, "/__gmode/health");
+    // Vite-backed web apps may block internal binding probes in local dev even
+    // when mounted traffic works; don't fail the whole app for that.
+    if (entry.kind === "web" && !res.ok && res.status === 403) {
+      return { ...base, ok: true, status: res.status };
+    }
+    return { ...base, ok: res.ok, status: res.status };
+  } catch (err) {
+    return {
+      ...base,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+async function gatewayHealth<Env>(
+  context: GatewayRequestContext<Env>,
+  internals: GatewayInternals<Env>,
+): Promise<Response> {
+  const services = await Promise.all(
+    internals.services.map((entry) =>
+      checkServiceHealth(entry, context.env),
+    ),
+  );
+  const ok = services.every((s) => s.ok);
+  return json(
+    {
+      ok,
+      gateway: {
+        name: internals.options.name,
+        version: internals.options.version,
+      },
+      services,
+    },
+    ok ? 200 : 503,
+  );
 }
 
 async function route<Env>(
@@ -323,15 +474,29 @@ async function route<Env>(
     : pathname;
 
   if (stripped === internals.defaults.openapiPath) {
-    const doc = await aggregateOpenApi({
-      context,
-      env: context.env,
-      gateway: {
-        name: internals.options.name,
-        version: internals.options.version,
-      },
-      services: internals.services,
-    });
+    const ttl = internals.defaults.openapiCacheTtlSeconds;
+    const refresh = context.url.searchParams.get("refresh") === "1";
+    const cached = internals.openapiCache;
+    let doc: Awaited<ReturnType<typeof aggregateOpenApi>>;
+    if (!refresh && ttl > 0 && cached && cached.expiresAt > Date.now()) {
+      doc = cached.doc as Awaited<ReturnType<typeof aggregateOpenApi>>;
+    } else {
+      doc = await aggregateOpenApi({
+        context,
+        env: context.env,
+        gateway: {
+          name: internals.options.name,
+          version: internals.options.version,
+        },
+        services: internals.services,
+      });
+      if (ttl > 0) {
+        internals.openapiCache = {
+          doc,
+          expiresAt: Date.now() + ttl * 1000,
+        };
+      }
+    }
     if (context.url.searchParams.get("profile") === "shield") {
       const { spec, warnings } = toShieldCompatibleSpec(doc);
       return json(spec, 200, {
@@ -368,6 +533,10 @@ async function route<Env>(
 
   if (stripped === "/favicon.ico") {
     return new Response(null, { status: 204 });
+  }
+
+  if (stripped === "/__gmode/health") {
+    return gatewayHealth(context, internals);
   }
 
   const match = matchService(stripped, internals.services);
@@ -456,6 +625,7 @@ async function route<Env>(
   context.matchedService = {
     name: match.service.name,
     mount: match.service.config.mount,
+    kind: match.service.kind ?? "service",
   };
 
   authorizeForService(
@@ -473,6 +643,11 @@ async function route<Env>(
 
   const rewrittenUrl = buildInternalUrl(context.url, match.rewrittenPath);
   const cache = resolveDownstreamCachePolicy(context, internals, match.service);
+  const contextSecret = resolveContextSecret(internals, context.env);
+  const devUrl =
+    match.service.kind === "web"
+      ? match.service.web?.devUrl?.(context.env)
+      : undefined;
 
   const response = await forwardToService({
     request: context.request,
@@ -483,7 +658,16 @@ async function route<Env>(
     gatewayContext,
     context,
     ...(cache ? { cache } : {}),
+    ...(contextSecret ? { contextSecret } : {}),
+    ...(devUrl ? { devUrl } : {}),
   });
+
+  // Web app responses (HTML, streamed SSR, WebSocket 101 upgrades) must pass
+  // through untouched — rebuilding the Response would break upgrades.
+  if (match.service.kind === "web" || response.status === 101) {
+    return response;
+  }
+
   return withMutableHeaders(
     response,
     deprecationHeaders(match.service.apiVersion),
@@ -519,6 +703,40 @@ export class GatewayImpl<Env> implements Gateway<Env> {
     this.registerService({
       name,
       config: config as GatewayServiceConfig<Env, keyof Env & string>,
+    });
+    return this;
+  }
+
+  web<Binding extends keyof Env & string>(
+    name: string,
+    config: GatewayWebConfig<Env, Binding>,
+  ): Gateway<Env> {
+    const serviceConfig: GatewayServiceConfig<Env, Binding> = {
+      mount: config.mount,
+      binding: config.binding,
+      // Web defaults: framework owns its base path, pages are public.
+      stripPrefix: config.stripPrefix ?? false,
+      auth: config.auth ?? false,
+      audience: config.audience ?? name,
+      // Web app OpenAPI is aggregated through the web entry metadata below,
+      // not the service-style `openapi` flag (paths need the api sub-mount).
+      openapi: false,
+    };
+    if (config.scopes) serviceConfig.scopes = config.scopes;
+    if (config.permissions) serviceConfig.permissions = config.permissions;
+    if (config.headers) serviceConfig.headers = config.headers;
+
+    const web: GatewayWebEntryInfo<Env> = {
+      apiMount: config.api?.mount ?? "/api",
+      openapi: config.api ? (config.api.openapi ?? true) : false,
+    };
+    if (config.dev?.url) web.devUrl = config.dev.url;
+
+    this.registerService({
+      name,
+      config: serviceConfig as GatewayServiceConfig<Env, keyof Env & string>,
+      kind: "web",
+      web,
     });
     return this;
   }

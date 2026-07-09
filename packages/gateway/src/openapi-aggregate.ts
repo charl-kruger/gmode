@@ -1,9 +1,9 @@
 import {
   apiErrorJsonSchema,
   mergeServiceSpecs,
-  type FetcherLike,
   type OpenApiDocument,
 } from "@gmode/core";
+import { fetchBindingGet, internalPathForEntry } from "./internal-fetch";
 import type {
   GatewayRequestContext,
   GatewayServiceEntry,
@@ -11,10 +11,61 @@ import type {
 
 const DEFAULT_INTERNAL_PATH = "/__gmode/openapi.json";
 
-function isFetcherLike(value: unknown): value is FetcherLike {
-  return Boolean(value) &&
-    typeof value === "object" &&
-    typeof (value as Record<string, unknown>)["fetch"] === "function";
+/** A service whose OpenAPI document could not be fetched during aggregation. */
+export type UnavailableOpenApiService = {
+  serviceName: string;
+  mount: string;
+  reason: string;
+};
+
+async function fetchServiceSpec<Env>(
+  entry: GatewayServiceEntry<Env>,
+  env: Env,
+  context: GatewayRequestContext<Env>,
+): Promise<OpenApiDocument> {
+  const defaultPath =
+    typeof entry.config.openapi === "object" && entry.config.openapi.path
+      ? entry.config.openapi.path
+      : DEFAULT_INTERNAL_PATH;
+  const path = internalPathForEntry(entry, defaultPath);
+
+  // Optional dev URL override for web apps.
+  const devUrl = entry.kind === "web" ? entry.web?.devUrl?.(env) : undefined;
+  let res: Response;
+  if (devUrl) {
+    res = await fetch(new URL(path, devUrl).toString());
+  } else {
+    res = await fetchBindingGet(entry, env, defaultPath);
+  }
+
+  // Vite-backed web apps in local dev often reject binding probes (403) while
+  // the same path works when routed through the gateway's public HTTP surface.
+  if (!res.ok && entry.kind === "web" && entry.web?.openapi) {
+    const publicPath = `${joinWebMount(entry.config.mount, entry.web.apiMount)}/openapi.json`;
+    res = await fetch(new URL(publicPath, context.url.origin).toString());
+  }
+
+  if (!res.ok) {
+    throw new Error(
+      `Service "${entry.name}" OpenAPI fetch returned ${res.status}`,
+    );
+  }
+
+  try {
+    return (await res.json()) as OpenApiDocument;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `Service "${entry.name}" OpenAPI JSON parse failed: ${message}`,
+    );
+  }
+}
+
+/** Join an app mount and its API sub-mount into a single OpenAPI path prefix. */
+function joinWebMount(mount: string, apiMount: string): string {
+  const left = mount === "/" ? "" : mount.replace(/\/$/, "");
+  const right = apiMount === "/" ? "" : apiMount;
+  return `${left}${right}` || "/";
 }
 
 /**
@@ -22,6 +73,10 @@ function isFetcherLike(value: unknown): value is FetcherLike {
  *
  * The gateway uses this for `/openapi.json`; integrators can call it when they
  * need the same aggregated document outside the normal route.
+ *
+ * Aggregation degrades gracefully: services whose spec fetch fails are listed
+ * under the document's `x-gmode-unavailable` extension (and tagged as
+ * unavailable) instead of failing the whole document.
  */
 export async function aggregateOpenApi<Env>(input: {
   /** Current gateway request context. */
@@ -38,44 +93,41 @@ export async function aggregateOpenApi<Env>(input: {
     mount: string;
     spec: OpenApiDocument;
   }[] = [];
+  const unavailable: UnavailableOpenApiService[] = [];
 
-  for (const entry of input.services) {
-    if (!entry.config.openapi) continue;
-    const path =
-      typeof entry.config.openapi === "object" && entry.config.openapi.path
-        ? entry.config.openapi.path
-        : DEFAULT_INTERNAL_PATH;
+  const enabled = input.services.filter((entry) =>
+    entry.kind === "web" ? entry.web?.openapi === true : entry.config.openapi,
+  );
+  const results = await Promise.allSettled(
+    enabled.map((entry) =>
+      fetchServiceSpec(entry, input.context.env, input.context),
+    ),
+  );
 
-    const binding = (input.context.env as Record<string, unknown>)[
-      entry.config.binding
-    ];
-    if (!isFetcherLike(binding)) {
-      throw new Error(
-        `Service binding "${entry.config.binding}" is not configured`,
-      );
-    }
-
-    const url = new URL(path, "https://internal.gmode");
-    const req = new Request(url.toString(), { method: "GET" });
-    const res = await binding.fetch(req);
-    if (!res.ok) {
-      throw new Error(
-        `Service "${entry.name}" OpenAPI fetch returned ${res.status}`,
-      );
-    }
-
-    try {
-      const spec = (await res.json()) as OpenApiDocument;
+  for (let i = 0; i < enabled.length; i++) {
+    const entry = enabled[i]!;
+    const result = results[i]!;
+    if (result.status === "fulfilled") {
+      // Web app API routes live under `<app mount><api mount>` publicly.
+      const mount =
+        entry.kind === "web" && entry.web
+          ? joinWebMount(entry.config.mount, entry.web.apiMount)
+          : entry.config.mount;
       services.push({
         serviceName: entry.name,
-        mount: entry.config.mount,
-        spec: applyApiVersionMetadata(spec, entry),
+        mount,
+        spec: applyApiVersionMetadata(result.value, entry),
       });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      throw new Error(
-        `Service "${entry.name}" OpenAPI JSON parse failed: ${message}`,
-      );
+    } else {
+      const reason =
+        result.reason instanceof Error
+          ? result.reason.message
+          : String(result.reason);
+      unavailable.push({
+        serviceName: entry.name,
+        mount: entry.config.mount,
+        reason,
+      });
     }
   }
 
@@ -103,11 +155,30 @@ export async function aggregateOpenApi<Env>(input: {
     },
   };
 
-  return mergeServiceSpecs({
+  const merged = mergeServiceSpecs({
     base,
     services,
     injectErrorSchema: apiErrorJsonSchema,
   });
+
+  if (unavailable.length > 0) {
+    const doc = merged as OpenApiDocument & {
+      "x-gmode-unavailable"?: UnavailableOpenApiService[];
+      tags?: { name: string; description?: string }[];
+    };
+    doc["x-gmode-unavailable"] = unavailable;
+    const tags = Array.isArray(doc.tags) ? doc.tags : [];
+    for (const entry of unavailable) {
+      tags.push({
+        name: entry.serviceName,
+        description: `Unavailable during aggregation: ${entry.reason}`,
+      });
+    }
+    doc.tags = tags;
+    return doc;
+  }
+
+  return merged;
 }
 
 function applyApiVersionMetadata<Env>(

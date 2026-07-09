@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gmode-example-web-dashboard",
+  "main": "src/server.ts",
+  "compatibility_date": "2026-05-18",
+  "compatibility_flags": ["nodejs_compat"],
+  // Private web app: reached through the gateway's Service Binding.
+  "workers_dev": false,
+  "observability": {
+    "enabled": true,
+  },
+}

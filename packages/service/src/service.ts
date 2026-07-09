@@ -8,7 +8,6 @@ import {
   createFlagsClient,
   created,
   error as errorFactory,
-  json,
   matchesAllScopes,
   noContent,
   ok,
@@ -229,6 +228,10 @@ export class ServiceImpl<Env> implements Service<Env> {
       return c.json(doc);
     });
 
+    this.app.get("/__gmode/health", (c) =>
+      c.json({ ok: true, service: this.name, version: this.version }),
+    );
+
     this.fetch = this.fetch.bind(this);
   }
 
@@ -243,8 +246,9 @@ export class ServiceImpl<Env> implements Service<Env> {
       const request = c.req.raw;
       const url = new URL(request.url);
 
-      const state = verifyServiceGatewayContext({
+      const state = await verifyServiceGatewayContext({
         request,
+        env: c.env as Env,
         options: this.options.trustGateway,
       });
 
@@ -398,6 +402,10 @@ export class ServiceImpl<Env> implements Service<Env> {
     config: RouteConfig<Env>,
   ): Service<Env> {
     return this.register("delete", path, config);
+  }
+
+  get registeredRoutes(): readonly RegisteredRoute<Env>[] {
+    return this.routes;
   }
 
   async fetch(

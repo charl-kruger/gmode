@@ -1,4 +1,4 @@
-import { ApiError, type GatewayContext } from "@gmode/core";
+import { ApiError, readContextSecret, type GatewayContext } from "@gmode/core";
 import {
   authorizeForService,
   FLAGS_BINDING_MISSING_STATE_KEY,
@@ -285,6 +285,7 @@ export async function invokeOperation<Env>(input: {
     audience,
     internals.defaults.tokenTtlSeconds,
   );
+  const contextSecret = readContextSecret(context.env);
 
   const response = await forwardToService({
     request: syntheticRequest,
@@ -294,6 +295,7 @@ export async function invokeOperation<Env>(input: {
     rewrittenUrl,
     gatewayContext,
     context,
+    ...(contextSecret ? { contextSecret } : {}),
   });
 
   const parsed = await parseResponseBody(response);

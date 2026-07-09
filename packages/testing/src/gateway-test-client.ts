@@ -6,7 +6,7 @@ export type GatewayLike<Env> = {
 };
 
 /** Convenience client for invoking a gateway in unit tests. */
-export type GatewayTestClient<Env> = {
+export type GatewayTestClient<_Env> = {
   /** Send an arbitrary request path through the gateway. */
   fetch(
     path: string,

@@ -1,4 +1,5 @@
 import { PUBLIC_REQUEST_ID_HEADER, isValidRequestId } from "@gmode/core";
+import { isPassthroughResponse } from "../passthrough";
 import type { GatewayMiddleware } from "../types";
 
 /**
@@ -23,6 +24,9 @@ export function requestId<Env>(options?: {
     context.requestId = id;
 
     const response = await next();
+    if (isPassthroughResponse(context, response)) {
+      return response;
+    }
     if (!response.headers.has(header)) {
       const headers = new Headers(response.headers);
       headers.set(header, id);

@@ -1,1 +1,2 @@
 JWT_SECRET=dev-jwt-secret
+GMODE_CONTEXT_SECRET=dev-secret-change-me

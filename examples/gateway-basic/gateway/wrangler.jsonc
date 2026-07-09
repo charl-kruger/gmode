@@ -53,6 +53,6 @@
     "enabled": false,
   },
   "secrets": {
-    "required": ["JWT_SECRET"],
+    "required": ["JWT_SECRET", "GMODE_CONTEXT_SECRET"],
   },
 }

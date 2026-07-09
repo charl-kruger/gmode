@@ -1,7 +1,7 @@
 {
   "name": "@gmode/cli",
   "version": "0.1.0",
-  "description": "GMode CLI for Cloudflare API Shield workflows.",
+  "description": "GMode CLI: scaffold, run, and deploy Cloudflare Workers app platforms (gateway + services + web apps) with one command.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/charl-kruger/gmode.git",
@@ -23,15 +23,22 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "templates",
+    "gmode.schema.json",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup src/index.ts src/bin.ts --format esm --dts --clean",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "clean": "rm -rf dist .turbo"
+    "clean": "rm -rf dist .turbo",
+    "lint": "biome lint src"
   },
   "dependencies": {
-    "@gmode/core": "workspace:*"
+    "@gmode/core": "workspace:*",
+    "@gmode/dashboard": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "22.20.0",

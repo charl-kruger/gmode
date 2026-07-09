@@ -105,6 +105,6 @@ const rpc = createRpcService<Env>({
   },
 });
 
-export type UsersApiRpc = typeof rpc.client;
+export type { UsersApiRpc, UsersApiRpcMethods } from "./contract";
 
 export default defineEntrypoint(rpc, { http: service });

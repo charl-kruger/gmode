@@ -9,6 +9,24 @@ export const GMODE_HEADERS = {
 /** Default public request id header. */
 export const PUBLIC_REQUEST_ID_HEADER = "x-request-id";
 
+/**
+ * Conventional env var / secret name holding the shared HMAC secret used to
+ * sign and verify the private gateway context between gateway and services.
+ */
+export const GMODE_CONTEXT_SECRET_VAR = "GMODE_CONTEXT_SECRET";
+
+/**
+ * Read the conventional gateway context secret from Worker env bindings.
+ *
+ * Returns `undefined` when the secret is absent or empty, in which case the
+ * gateway falls back to unsigned context tokens.
+ */
+export function readContextSecret(env: unknown): string | undefined {
+  if (!env || typeof env !== "object") return undefined;
+  const value = (env as Record<string, unknown>)[GMODE_CONTEXT_SECRET_VAR];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
 /** Prefix stripped from client requests before gateway forwarding. */
 export const GMODE_HEADER_PREFIX = "x-gmode-";
 

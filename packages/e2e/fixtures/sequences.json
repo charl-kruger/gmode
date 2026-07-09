@@ -1,0 +1,14 @@
+{
+  "rules": [
+    {
+      "name": "e2e-login-then-profile",
+      "description": "E2E fixture sequence rule",
+      "pattern": [
+        { "operationId": "listUsers" },
+        { "operationId": "getUser" }
+      ],
+      "action": "log",
+      "withinSeconds": 60
+    }
+  ]
+}

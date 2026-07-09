@@ -1,0 +1,3 @@
+# Shared HMAC secret used to sign the private gateway context.
+# `gmode init` generates one automatically; for this example, pick any value.
+GMODE_CONTEXT_SECRET=dev-secret-change-me

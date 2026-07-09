@@ -1,0 +1,31 @@
+{
+  "name": "gmode-example-web-dashboard",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "vite build && wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gmode/service": "workspace:*",
+    "@gmode/web": "workspace:*",
+    "@tanstack/react-router": "^1.138.0",
+    "@tanstack/react-start": "^1.138.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.5.0",
+    "@cloudflare/workers-types": "5.20260706.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.0",
+    "wrangler": "^4.107.1"
+  }
+}

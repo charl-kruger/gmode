@@ -1,0 +1,36 @@
+{
+  "name": "@gmode/dashboard",
+  "version": "0.1.0",
+  "description": "Prebuilt local dev dashboard UI served by `gmode dev`.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/charl-kruger/gmode.git",
+    "directory": "packages/dashboard"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite dev",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'no tests'",
+    "clean": "rm -rf dist .turbo",
+    "lint": "biome lint src"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.0"
+  }
+}

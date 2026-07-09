@@ -85,7 +85,11 @@ export function gatewayIndexHtml<Env>(input: {
     .sort((a, b) => a.config.mount.localeCompare(b.config.mount))
     .map(
       (s) =>
-        `<li><span class="mount">${escape(s.config.mount)}</span> <span class="svc">${escape(s.name)}${s.config.auth ? " · auth required" : ""
+        `<li><span class="mount">${escape(s.config.mount)}</span> <span class="svc">${escape(s.name)}${s.kind === "web" ? " · web app" : ""
+        }${s.kind === "web" && s.web?.openapi
+          ? ` · api at ${escape(s.config.mount === "/" ? s.web.apiMount : s.config.mount + s.web.apiMount)}`
+          : ""
+        }${s.config.auth ? " · auth required" : ""
         }${s.config.scopes && s.config.scopes.length > 0
           ? ` · scopes: ${s.config.scopes.map(escape).join(", ")}`
           : ""

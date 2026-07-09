@@ -1,0 +1,22 @@
+{
+  "name": "@gmode/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end smoke tests for the GMode platform (live wrangler / gmode dev).",
+  "scripts": {
+    "pretest": "pnpm --filter @gmode/cli build && pnpm --filter @gmode/dashboard build && pnpm --filter create-gmode build",
+    "pretest:smoke": "pnpm --filter @gmode/cli build && pnpm --filter @gmode/dashboard build && pnpm --filter create-gmode build",
+    "test": "vitest run",
+    "test:smoke": "vitest run src/suites",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint src",
+    "clean": "rm -rf .turbo"
+  },
+  "devDependencies": {
+    "@gmode/testing": "workspace:*",
+    "@types/node": "22.20.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  }
+}

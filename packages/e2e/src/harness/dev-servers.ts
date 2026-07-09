@@ -1,0 +1,91 @@
+import {
+  GATEWAY_BASIC_GATEWAY,
+  gmodeBin,
+  repoBin,
+  WEB_APP_TANSTACK,
+} from "./paths";
+import { waitForHealth } from "./http";
+import { getFreePort } from "./ports";
+import {
+  type ManagedProcess,
+  spawnManaged,
+  stopAll,
+} from "./process";
+
+export type DevServers = {
+  gatewayBasicUrl: string;
+  webAppGatewayUrl: string;
+  dashboardUrl: string;
+  stop: () => Promise<void>;
+};
+
+/** Start shared dev servers for the full E2E run (called from globalSetup). */
+export async function startDevServers(): Promise<DevServers> {
+  const processes: ManagedProcess[] = [];
+
+  const basicPort = await getFreePort();
+  const gatewayBasicUrl = `http://127.0.0.1:${basicPort}`;
+  processes.push(
+    spawnManaged({
+      name: "gateway-basic",
+      cwd: GATEWAY_BASIC_GATEWAY,
+      command: repoBin("wrangler"),
+      args: [
+        "dev",
+        "-c",
+        "wrangler.jsonc",
+        "-c",
+        "../users-api/wrangler.jsonc",
+        "-c",
+        "../billing-api/wrangler.jsonc",
+        "--ip",
+        "127.0.0.1",
+        "--port",
+        String(basicPort),
+      ],
+    }),
+  );
+
+  const webPort = await getFreePort();
+  const dashboardPort = await getFreePort();
+  const webAppGatewayUrl = `http://127.0.0.1:${webPort}`;
+  const dashboardUrl = `http://127.0.0.1:${dashboardPort}`;
+  processes.push(
+    spawnManaged({
+      name: "gmode-dev",
+      cwd: WEB_APP_TANSTACK,
+      command: process.execPath,
+      args: [
+        gmodeBin(),
+        "dev",
+        "--port",
+        String(webPort),
+        "--dashboard-port",
+        String(dashboardPort),
+      ],
+    }),
+  );
+
+  await Promise.all([
+    waitForHealth(gatewayBasicUrl, { timeoutMs: 120_000 }),
+    waitForHealth(webAppGatewayUrl, { timeoutMs: 120_000 }),
+  ]);
+
+  const dashboardDeadline = Date.now() + 30_000;
+  while (Date.now() < dashboardDeadline) {
+    try {
+      const res = await fetch(`${dashboardUrl}/api/state`);
+      if (res.ok) break;
+    } catch {
+      // retry
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+
+  return {
+    gatewayBasicUrl,
+    webAppGatewayUrl,
+    dashboardUrl,
+    stop: () => stopAll(processes),
+  };
+}

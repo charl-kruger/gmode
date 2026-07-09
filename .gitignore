@@ -11,6 +11,13 @@ coverage/
 
 .DS_Store
 
+# E2E test artifacts
+packages/e2e/.e2e-state.json
+packages/e2e/fixtures/.sequences-out.json
+packages/e2e/fixtures/.bootstrap-out.json
+examples/web-app-tanstack/generated-e2e/
+examples/web-app-tanstack/generated-e2e-live/
+
 # Local source material used for the port; not part of the GMode repo.
 refrences/
 references/

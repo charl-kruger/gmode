@@ -50,6 +50,16 @@ export type ServiceOptions<Env> = {
     audience: string;
     /** Whether the header is required. Defaults to `true`. */
     required?: boolean;
+    /**
+     * Resolve the shared HMAC secret used to verify signed gateway context.
+     *
+     * Defaults to reading `env.GMODE_CONTEXT_SECRET`. When a secret is
+     * present, unsigned context tokens are rejected unless `allowUnsigned`
+     * is `true`.
+     */
+    secret?: (env: Env) => string | undefined;
+    /** Accept unsigned tokens even when a secret is configured. Defaults to `false`. */
+    allowUnsigned?: boolean;
   };
   /** Internal documentation route settings. */
   docs?: {
@@ -208,6 +218,13 @@ export interface Service<Env> {
   error: typeof errorFactory;
   /** Common response schemas, including the standard error schema. */
   errors: { schema: typeof ApiErrorSchema };
+
+  /**
+   * Read-only registry of routes registered on this service.
+   *
+   * Used by framework integrations and `gmode generate client` codegen.
+   */
+  readonly registeredRoutes: readonly RegisteredRoute<Env>[];
 
   /** Cloudflare Worker `fetch` handler. */
   fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response>;

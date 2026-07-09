@@ -53,6 +53,13 @@ export type RpcServiceOptions<Env> = {
     audience: string;
     /** Whether the context token is required. Defaults to `true`. */
     required?: boolean;
+    /**
+     * Resolve the shared HMAC secret used to verify signed gateway context.
+     * Defaults to reading `env.GMODE_CONTEXT_SECRET`.
+     */
+    secret?: (env: Env) => string | undefined;
+    /** Accept unsigned tokens even when a secret is configured. Defaults to `false`. */
+    allowUnsigned?: boolean;
   };
   /** Optional Flagship binding for method feature gates and handlers. */
   flags?: ServiceRpcFlagsOptions<Env>;

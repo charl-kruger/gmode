@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/@gmode/cli/gmode.schema.json",
+  "name": "__APP_NAME__",
+  "gateway": {
+    "path": "./gateway",
+    "port": 8787
+  },
+  "services": [],
+  "webApps": []
+}

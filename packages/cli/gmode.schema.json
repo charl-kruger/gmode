@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GMode application manifest (gmode.jsonc)",
+  "type": "object",
+  "required": ["name", "gateway"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": {
+      "type": "string",
+      "description": "Application name; used as the Worker name prefix."
+    },
+    "gateway": {
+      "type": "object",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the gateway Worker directory, relative to this file."
+        },
+        "port": {
+          "type": "integer",
+          "description": "Local dev port for the gateway. Defaults to 8787."
+        }
+      }
+    },
+    "services": {
+      "type": "array",
+      "description": "Private API service Workers routed through the gateway.",
+      "items": {
+        "type": "object",
+        "required": ["name", "path", "mount"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "path": { "type": "string" },
+          "mount": {
+            "type": "string",
+            "pattern": "^/",
+            "description": "Public gateway path prefix, e.g. /users."
+          },
+          "auth": {
+            "type": "boolean",
+            "description": "Require an authenticated gateway context before forwarding."
+          },
+          "scopes": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "audience": {
+            "type": "string",
+            "description": "Gateway context audience. Defaults to the service name."
+          },
+          "openapi": {
+            "type": "boolean",
+            "description": "Include in gateway OpenAPI aggregation. Defaults to true."
+          }
+        }
+      }
+    },
+    "webApps": {
+      "type": "array",
+      "description": "Full web application Workers (TanStack Start, Vite SPA) mounted on the gateway.",
+      "items": {
+        "type": "object",
+        "required": ["name", "path", "mount"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "path": { "type": "string" },
+          "mount": {
+            "type": "string",
+            "pattern": "^/",
+            "description": "Public gateway path prefix, e.g. /app."
+          },
+          "framework": {
+            "type": "string",
+            "enum": ["tanstack-start", "vite-react", "custom"]
+          },
+          "devPort": {
+            "type": "integer",
+            "description": "Fixed local Vite dev port. Assigned automatically when omitted."
+          },
+          "api": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "mount": {
+                "type": "string",
+                "pattern": "^/",
+                "description": "API mount inside the app, relative to the app mount. Defaults to /api."
+              },
+              "openapi": {
+                "type": "boolean",
+                "description": "Include the app's API routes in gateway OpenAPI aggregation. Defaults to true."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -83,7 +83,7 @@ describe("integration: gateway → service", () => {
     return service;
   }
 
-  function buildGateway(env: GatewayEnv) {
+  function buildGateway(_env: GatewayEnv) {
     const gateway = createGateway<GatewayEnv>({
       name: "Test API",
       version: "1.0.0",
