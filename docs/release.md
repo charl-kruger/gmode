@@ -6,8 +6,14 @@ GitHub `Release` workflow.
 ## Versioning Model
 
 Changesets owns package versions. Public packages are configured as a fixed
-group while GMode is pre-1.0, so a release PR bumps the `@gmode/*` packages as
-a coherent set.
+group while GMode is pre-1.0, so a release PR bumps the `@gmode/*` packages and
+`create-gmode` as a coherent set.
+
+Fixed group (from `.changeset/config.json`):
+
+`@gmode/core`, `@gmode/service`, `@gmode/gateway`, `@gmode/rpc`, `@gmode/cli`,
+`@gmode/mcp`, `@gmode/testing`, `@gmode/web`, `@gmode/client`,
+`@gmode/dashboard`, `create-gmode`
 
 Pre-1.0 compatibility policy:
 
@@ -34,7 +40,9 @@ Run the local gate before opening a PR:
 ```bash
 pnpm install
 pnpm typecheck
+pnpm lint
 pnpm test
+pnpm test:e2e:smoke
 pnpm build
 git diff --check
 ```
@@ -43,8 +51,10 @@ git diff --check
 
 The repository has two workflows:
 
-- `CI` runs on pushes to `main` and on pull requests.
-- `Release` runs on pushes to `main`, verifies the repo, then either opens a
+- **CI** — on pushes to `main` and pull requests:
+  - `verify`: typecheck, unit tests, build
+  - `e2e-smoke`: `pnpm test:e2e:smoke` (15 min timeout)
+- **Release** — on pushes to `main`: verifies the repo, then either opens a
   Changesets version PR or publishes packages when the version PR is merged.
 
 When a feature PR with changesets lands on `main`, the release workflow opens
@@ -55,7 +65,7 @@ entries, then merge that version PR to publish.
 
 Required repository secret:
 
-- `NPM_TOKEN` - npm automation token with publish access to the `@gmode` scope.
+- `NPM_TOKEN` — npm automation token with publish access to the `@gmode` scope.
 
 The workflow uses `actions/setup-node` with the npm registry and passes
 `NODE_AUTH_TOKEN` to `pnpm publish`. Do not commit a project-level `.npmrc`
@@ -82,14 +92,18 @@ dependencies during packing.
 Inspect tarballs before the first public release or after any packaging change:
 
 ```bash
-for package in core service gateway rpc cli mcp testing; do
+for package in core service gateway rpc cli mcp testing web client dashboard; do
   pnpm --filter "@gmode/$package" pack --pack-destination /tmp/gmode-packs
 done
+pnpm --filter create-gmode pack --pack-destination /tmp/gmode-packs
 ```
 
 Each tarball should contain `dist`, package metadata, a package `README.md`,
 and no local test fixtures, generated temp output, secrets, or source-only
 workspace paths.
+
+Scaffold templates ship inside `@gmode/cli` and pin `^0.1.0` (or the current
+published version) for consumer `package.json` dependencies.
 
 ## Post-Publish
 
@@ -97,12 +111,11 @@ Verify npm metadata:
 
 ```bash
 npm view @gmode/core version
-npm view @gmode/service version
 npm view @gmode/gateway version
-npm view @gmode/rpc version
 npm view @gmode/cli version
-npm view @gmode/mcp version
-npm view @gmode/testing version
+npm view @gmode/web version
+npm view @gmode/client version
+npm view create-gmode version
 ```
 
 If any publish step fails, fix the package or npm configuration and rerun the

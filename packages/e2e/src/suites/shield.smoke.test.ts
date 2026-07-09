@@ -17,11 +17,12 @@ const hasCloudflareCreds = Boolean(
 describe("shield CLI smoke (offline)", () => {
   it("shield:sync-sequences --dry-run exports dashboard JSON", async () => {
     const sequences = join(E2E_FIXTURES, "sequences.json");
-    const result = await runGmode(
-      REPO_ROOT,
-      ["shield:sync-sequences", "--file", sequences, "--dry-run"],
-      shieldEnv,
-    );
+    const result = await runGmode(REPO_ROOT, [
+      "shield:sync-sequences",
+      "--file",
+      sequences,
+      "--dry-run",
+    ]);
     expect(result.code).toBe(0);
     const parsed = JSON.parse(result.stdout) as {
       sequences: { name: string }[];
@@ -32,11 +33,13 @@ describe("shield CLI smoke (offline)", () => {
   it("shield:sync-sequences --out writes import file", async () => {
     const sequences = join(E2E_FIXTURES, "sequences.json");
     const out = join(E2E_FIXTURES, ".sequences-out.json");
-    const result = await runGmode(
-      REPO_ROOT,
-      ["shield:sync-sequences", "--file", sequences, "--out", out],
-      shieldEnv,
-    );
+    const result = await runGmode(REPO_ROOT, [
+      "shield:sync-sequences",
+      "--file",
+      sequences,
+      "--out",
+      out,
+    ]);
     expect(result.code).toBe(0);
     expect(existsSync(out)).toBe(true);
     const written = JSON.parse(readFileSync(out, "utf8")) as {

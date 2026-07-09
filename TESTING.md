@@ -1,11 +1,13 @@
 # Testing GMode locally
 
-Three workflows: **unit/integration tests** (Vitest, no Cloudflare needed),
-**end-to-end** (`wrangler dev`, multi-Worker, real Service Bindings), and
-**GitHub CI** for pull requests and releases.
+Four workflows: **unit/integration tests** (Vitest, no Cloudflare needed),
+**E2E smoke** (`@gmode/e2e`, live `wrangler dev` / `gmode dev`), **manual
+wrangler dev**, and **GitHub CI**.
 
-The example app at `examples/gateway-basic/` is the reference setup —
-one Gateway Worker plus two Service Workers (`users-api`, `billing-api`).
+| Example | Best for |
+|---|---|
+| [gateway-basic](./examples/gateway-basic/) | JWT, MCP, RPC, Shield OpenAPI |
+| [web-app-tanstack](./examples/web-app-tanstack/) | Manifest, `gmode dev`, web apps, codegen |
 
 ---
 
@@ -42,10 +44,12 @@ that's how `packages/gateway/src/integration.test.ts` wires a real
 
 ```bash
 pnpm typecheck       # tsc --noEmit across all packages
+pnpm lint            # biome across packages
 pnpm build           # tsup for libraries, tsc --noEmit for example apps
 ```
 
-All three (`build`, `typecheck`, `test`) must be green before shipping.
+All four (`build`, `typecheck`, `lint`, `test`) must be green before shipping.
+E2E smoke is a separate step (see below).
 
 ### Automated E2E smoke (`@gmode/e2e`)
 
@@ -55,8 +59,8 @@ dev dashboard.
 
 ```bash
 pnpm build                        # required once
-pnpm test:e2e:smoke               # ~2 min, all smoke suites
-pnpm --filter @gmode/e2e test     # same as test:e2e
+pnpm test:e2e:smoke               # ~80s, all smoke suites (not part of `pnpm test`)
+pnpm --filter @gmode/e2e test:smoke
 ```
 
 Suites live in `packages/e2e/src/suites/` (shared dev servers start once via
@@ -79,7 +83,23 @@ run is interrupted: `pkill -f "wrangler dev"; pkill -f "gmode dev"`.
 
 ---
 
-## 2. Local end-to-end with `wrangler dev`
+## 2. Local end-to-end with `gmode dev` (web-app-tanstack)
+
+The fastest way to exercise the full platform (gateway + service + TanStack
+web app + dev dashboard):
+
+```bash
+cd examples/web-app-tanstack
+cp gateway/.dev.vars.example gateway/.dev.vars
+pnpm install
+pnpm dev
+```
+
+Then open http://localhost:8787/docs and http://localhost:9100.
+
+---
+
+## 3. Local end-to-end with `wrangler dev` (gateway-basic)
 
 Each Worker has its own `wrangler.jsonc` and runs in its own process. They
 talk to each other over real Service Bindings — Wrangler auto-discovers
@@ -196,7 +216,7 @@ pre-evaluated flags.
 
 ---
 
-## 3. What works locally vs. what doesn't
+## 4. What works locally vs. what doesn't
 
 | Feature | Local `wrangler dev` | Notes |
 |---|---|---|
@@ -208,7 +228,8 @@ pre-evaluated flags.
 | Workers Cache | ⚠️ | Gateway policy forwarding can be tested locally, but network cache behavior needs deployed Workers and `Cf-Cache-Status`. Keep the public gateway cache disabled and enable cache on downstream service Workers. |
 | `WorkerEntrypoint` RPC | ✅ | Service Bindings are RPC + `fetch()` simultaneously when the target extends `WorkerEntrypoint`. `wrangler dev` auto-discovers — start both Workers, the caller's `env.USERS_API.getUserById(...)` just works. |
 | Workers Logs | n/a | Local logs go to stdout; the `observability.head_sampling_rate` only matters in prod. |
-| OpenAPI aggregation + `/docs` | ✅ | Gateway fetches each service's `/__gmode/openapi.json` over the Service Binding. |
+| `gmode dev` orchestration | ✅ | Starts gateway, services, Vite, and dev dashboard from `gmode.jsonc`. |
+| OpenAPI aggregation + `/docs` | ✅ | Gateway fetches service and web-app OpenAPI over Service Bindings. |
 
 ### Stubbing Flagship locally
 
@@ -222,13 +243,14 @@ For tests, use `createMockFlagship` from `@gmode/testing` — see
 
 ---
 
-## 4. GitHub CI and releases
+## 5. GitHub CI and releases
 
 Pull requests and pushes to `main` run:
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm typecheck
+pnpm lint
 pnpm test
 pnpm build
 ```
@@ -242,7 +264,7 @@ or publishes packages to npm. Release-specific details live in
 
 ---
 
-## 5. Common failures
+## 6. Common failures
 
 - **`404 NOT_FOUND` on every path** — the path didn't match any
   `gateway.service({ mount })`. Check the mount strings; `/users` matches
@@ -265,14 +287,20 @@ or publishes packages to npm. Release-specific details live in
 
 ---
 
-## 6. Quick reference
+## 7. Quick reference
 
 ```bash
 # Everything green from a clean checkout
-pnpm install && pnpm build && pnpm typecheck && pnpm test
+pnpm install && pnpm build && pnpm typecheck && pnpm lint && pnpm test
 
-# Local E2E
+# E2E smoke (live processes)
+pnpm test:e2e:smoke
+
+# Manual gateway-basic
 (cd examples/gateway-basic/users-api   && pnpm dev -- --port 8788) &
 (cd examples/gateway-basic/billing-api && pnpm dev -- --port 8789) &
 (cd examples/gateway-basic/gateway     && pnpm dev -- --port 8787)
+
+# Full platform (manifest workspace)
+cd examples/web-app-tanstack && pnpm dev
 ```

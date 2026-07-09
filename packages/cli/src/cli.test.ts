@@ -195,4 +195,76 @@ describe("sync sequences", () => {
       ],
     });
   });
+
+  it("shield:sync-sequences --dry-run works without Cloudflare credentials", async () => {
+    const policy = defineSequences([
+      {
+        name: "login-then-profile",
+        pattern: [{ operationId: "listUsers" }, { operationId: "getUser" }],
+        action: "log",
+        withinSeconds: 60,
+      },
+    ]);
+    const h = harness({
+      env: {},
+      files: {
+        "/work/sequences.json": JSON.stringify(policy),
+      },
+    });
+
+    const code = await run(
+      ["shield:sync-sequences", "--file", "sequences.json", "--dry-run"],
+      h.cli,
+    );
+
+    expect(code).toBe(0);
+    const parsed = JSON.parse(h.stdout.join("\n")) as {
+      sequences: { name: string }[];
+    };
+    expect(parsed.sequences[0]?.name).toBe("login-then-profile");
+    expect(h.fetchCalls).toHaveLength(0);
+  });
+
+  it("shield:sync-sequences --out writes dashboard import JSON", async () => {
+    const policy = defineSequences([
+      {
+        name: "checkout",
+        pattern: [
+          { operationId: "startCheckout" },
+          { operationId: "payInvoice" },
+        ],
+        action: "block",
+      },
+    ]);
+    const writes: { path: string; contents: string }[] = [];
+    const h = harness({
+      env: {},
+      files: {
+        "/work/sequences.json": JSON.stringify(policy),
+      },
+    });
+    h.cli.writeFile = async (path, contents) => {
+      writes.push({ path, contents });
+    };
+
+    const code = await run(
+      [
+        "shield:sync-sequences",
+        "--file",
+        "sequences.json",
+        "--out",
+        "out.json",
+      ],
+      h.cli,
+    );
+
+    expect(code).toBe(0);
+    expect(writes).toHaveLength(1);
+    expect(writes[0]!.path).toBe("/work/out.json");
+    const parsed = JSON.parse(writes[0]!.contents) as {
+      sequences: { name: string }[];
+    };
+    expect(parsed.sequences[0]?.name).toBe("checkout");
+    expect(h.fetchCalls).toHaveLength(0);
+  });
 });

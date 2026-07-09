@@ -114,9 +114,9 @@ export const doctor: CommandRunner = async (_args, cli: CliEnv) => {
     add(`${entry.name}: wrangler.jsonc exists`, true);
     if (config.config["name"] !== entry.workerName) {
       add(
-        `${entry.name}: worker name matches convention`,
-        true,
-        `uses "${String(config.config["name"])}" (manifest expects "${entry.workerName}" only if unnamed)`,
+        `${entry.name}: worker name matches manifest`,
+        false,
+        `wrangler name is "${String(config.config["name"])}" but manifest expects "${entry.workerName}" — run \`gmode sync\``,
       );
     }
     if (entry.kind === "service") {
@@ -161,6 +161,21 @@ export const doctor: CommandRunner = async (_args, cli: CliEnv) => {
     Boolean(gatewaySecret),
     gatewaySecret ? undefined : "context tokens will be unsigned in local dev",
   );
+
+  const jwtSecret = existsSync(devVars)
+    ? readFileSync(devVars, "utf8").match(/^JWT_SECRET=(.+)$/m)?.[1]?.trim()
+    : undefined;
+  const requiredSecrets =
+    (
+      gateway?.config["secrets"] as { required?: string[] } | undefined
+    )?.required ?? [];
+  if (requiredSecrets.includes("JWT_SECRET")) {
+    add(
+      "gateway .dev.vars has JWT_SECRET",
+      Boolean(jwtSecret),
+      jwtSecret ? undefined : "JWT auth routes will fail in local dev",
+    );
+  }
 
   if (gatewaySecret) {
     for (const entry of resolved.entries) {

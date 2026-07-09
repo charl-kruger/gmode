@@ -10,7 +10,7 @@
     "typecheck": "tsc -b"
   },
   "devDependencies": {
-    "@gmode/cli": "^0.2.0",
+    "@gmode/cli": "^0.1.0",
     "typescript": "^5.6.3",
     "wrangler": "^4.107.0"
   }

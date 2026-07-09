@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { runGmode } from "../harness/cli";
 import { readE2EState } from "../harness/state";
 import { WEB_APP_TANSTACK } from "../harness/paths";

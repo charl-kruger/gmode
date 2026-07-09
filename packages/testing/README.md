@@ -2,5 +2,9 @@
 
 Test clients and deterministic Cloudflare binding mocks for GMode packages.
 
-See `TESTING.md` for local unit, integration, and multi-Worker verification
-workflows.
+- `createGatewayTestClient` / `createServiceTestClient`
+- `createTestJwt`, `createTestGatewayContext`
+- `createMockFetcher`, `createMockRateLimit`, `createMockFlagship`, `createMockRpcBinding`
+
+Guides: [TESTING.md](../../TESTING.md),
+[Reference — testing](../../docs/reference.md#testing).

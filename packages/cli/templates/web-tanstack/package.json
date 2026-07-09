@@ -11,8 +11,8 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
-    "@gmode/service": "^0.2.0",
-    "@gmode/web": "^0.2.0",
+    "@gmode/service": "^0.1.0",
+    "@gmode/web": "^0.1.0",
     "@tanstack/react-router": "^1.138.0",
     "@tanstack/react-start": "^1.138.0",
     "react": "^19.0.0",

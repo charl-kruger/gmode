@@ -8,7 +8,7 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
-    "@gmode/service": "^0.2.0"
+    "@gmode/service": "^0.1.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260501.0",

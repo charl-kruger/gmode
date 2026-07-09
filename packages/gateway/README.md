@@ -1,7 +1,13 @@
 # @gmode/gateway
 
-Focused API gateway runtime for Cloudflare Workers. It provides
-`createGateway()`, middleware, OpenAPI aggregation, docs UI mounting, and
-Service Binding forwarding.
+Focused API gateway runtime for Cloudflare Workers.
 
-See the root GMode README and `docs/getting-started.md` for full usage guides.
+- `createGateway()` with composable middleware
+- Longest-prefix routing to Service Bindings
+- OpenAPI aggregation from services and web apps
+- HMAC-signed `x-gmode-context` forwarding
+- Swagger UI / Scalar at `/docs`
+
+Guides: [Getting started](../../docs/getting-started.md),
+[Workspace CLI](../../docs/workspace-cli.md),
+[Auth and security](../../docs/auth-and-security.md).

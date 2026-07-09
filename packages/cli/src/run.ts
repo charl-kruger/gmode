@@ -57,10 +57,10 @@ Common options:
   --config <path>          Path to gmode.config.json (Shield commands only)
 
 Env vars (Shield commands):
-  CLOUDFLARE_API_TOKEN     Required
-  CLOUDFLARE_ZONE_ID       Required
+  CLOUDFLARE_API_TOKEN     Required for live Shield commands
+  CLOUDFLARE_ZONE_ID       Required for live Shield commands
 
-See docs/README.md for the full reference.`;
+See docs/workspace-cli.md for the full reference.`;
 
 export async function run(argv: string[], cli: CliEnv): Promise<number> {
   const [cmd, ...rest] = argv;

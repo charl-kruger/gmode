@@ -1,6 +1,6 @@
 import type { SequencePolicy, SequenceRule } from "@gmode/core";
 import { createCloudflareClient } from "../cloudflare";
-import { loadConfig } from "../config";
+import { loadConfig, loadOptionalConfig } from "../config";
 import type { CommandRunner } from "../types";
 
 type SyncSequencesArgs = {
@@ -56,9 +56,9 @@ export const syncSequences: CommandRunner = async (argv, cli) => {
   const args = parseArgs(argv);
   const opts: { configPath?: string } = {};
   if (args.configPath) opts.configPath = args.configPath;
-  const config = await loadConfig(cli, opts);
+  const optionalConfig = await loadOptionalConfig(cli, opts);
 
-  const file = args.file ?? config.shield?.sequences;
+  const file = args.file ?? optionalConfig.shield?.sequences;
   if (!file) {
     cli.stderr(
       "Provide a sequences file with --file <path> or shield.sequences in gmode.config.json. File must be JSON with shape { rules: [...] }.",
@@ -101,8 +101,7 @@ export const syncSequences: CommandRunner = async (argv, cli) => {
     cli.stdout(
       `Writing dashboard-import JSON to ${outPath} (${policy.rules.length} rules)`,
     );
-    const { writeFile } = await import("node:fs/promises");
-    await writeFile(outPath, JSON.stringify(dashboardJson, null, 2));
+    await cli.writeFile(outPath, JSON.stringify(dashboardJson, null, 2));
     return 0;
   }
 
@@ -111,6 +110,7 @@ export const syncSequences: CommandRunner = async (argv, cli) => {
     return 0;
   }
 
+  const config = await loadConfig(cli, opts);
   const client = createCloudflareClient({
     apiToken: config.cloudflare.apiToken,
     zoneId: config.cloudflare.zoneId,

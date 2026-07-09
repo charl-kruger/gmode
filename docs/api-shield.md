@@ -34,12 +34,21 @@ gateway.use(
 
 ## CLI Commands
 
+Live Shield commands require `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ZONE_ID`
+(env vars or `gmode.config.json`). Offline sequence export works without
+credentials:
+
 ```bash
-gmode shield:bootstrap --from https://api.example.com/openapi.json --out shield.openapi.json --json
-gmode shield:bootstrap --from https://api.example.com/openapi.json --upload --name gmode:prod
-gmode shield:push-schema --from https://api.example.com/openapi.json
+# Offline — no Cloudflare API calls
+gmode shield:sync-sequences --file sequences.json --dry-run
+gmode shield:sync-sequences --file sequences.json --out dashboard-import.json
+
+# Live zone
+gmode shield:bootstrap --from https://api.example.com/openapi.json?profile=shield --out shield.openapi.json --json
+gmode shield:bootstrap --from https://api.example.com/openapi.json?profile=shield --upload --name gmode:prod
+gmode shield:push-schema --from https://api.example.com/openapi.json?profile=shield
 gmode shield:sync-schema-actions --from https://api.example.com/openapi.json --file shield-actions.json --dry-run
-gmode shield:diff-discovered --from https://api.example.com/openapi.json
+gmode shield:diff-discovered --from https://api.example.com/openapi.json?profile=shield
 gmode shield:sync-sequences --file sequences.json
 ```
 

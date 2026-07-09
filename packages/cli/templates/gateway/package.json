@@ -8,8 +8,8 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
-    "@gmode/core": "^0.2.0",
-    "@gmode/gateway": "^0.2.0"
+    "@gmode/core": "^0.1.0",
+    "@gmode/gateway": "^0.1.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260501.0",

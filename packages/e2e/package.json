@@ -7,7 +7,7 @@
   "scripts": {
     "pretest": "pnpm --filter @gmode/cli build && pnpm --filter @gmode/dashboard build && pnpm --filter create-gmode build",
     "pretest:smoke": "pnpm --filter @gmode/cli build && pnpm --filter @gmode/dashboard build && pnpm --filter create-gmode build",
-    "test": "vitest run",
+    "test": "echo 'Run pnpm test:e2e:smoke for live smoke tests'",
     "test:smoke": "vitest run src/suites",
     "typecheck": "tsc --noEmit",
     "lint": "biome lint src",

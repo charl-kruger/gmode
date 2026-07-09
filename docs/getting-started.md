@@ -1,9 +1,38 @@
 # Getting Started
 
-## Install
+Two paths:
+
+1. **Workspace scaffold** (recommended) — `pnpm create gmode my-app`, then
+   `gmode new service` / `gmode dev`. See [Workspace CLI](./workspace-cli.md).
+2. **Hand-written Workers** — copy the gateway and service patterns below into
+   your own `wrangler.jsonc` projects.
+
+## Install (monorepo contributors)
 
 ```bash
 pnpm install
+pnpm build
+```
+
+## Scaffold A Workspace
+
+```bash
+pnpm create gmode my-app
+cd my-app
+pnpm install
+pnpm exec gmode new service users
+pnpm dev
+```
+
+- Gateway: http://localhost:8787
+- API docs: http://localhost:8787/docs
+- Dev dashboard: http://localhost:9100
+
+Add a TanStack Start web app:
+
+```bash
+pnpm exec gmode new web dashboard --framework tanstack-start
+pnpm dev
 ```
 
 ## Create A Gateway Worker
@@ -13,7 +42,6 @@ import {
   cloudflareRateLimit,
   cors,
   createGateway,
-  idempotency,
   jsonErrors,
   jwtAuth,
   requestId,
@@ -24,19 +52,13 @@ import type { CloudflareRateLimitBinding, FetcherLike } from "@gmode/core";
 type Env = {
   USERS_API: FetcherLike;
   API_RATE_LIMITER: CloudflareRateLimitBinding;
-  IDEMPOTENCY: KVNamespace;
   JWT_SECRET: string;
+  GMODE_CONTEXT_SECRET?: string;
 };
 
 const gateway = createGateway<Env>({
   name: "Example API",
   version: "1.0.0",
-  cache: {
-    enabled: true,
-    default: {
-      cacheControl: "public, max-age=60, stale-while-revalidate=300",
-    },
-  },
 });
 
 gateway.use(requestId());
@@ -45,12 +67,12 @@ gateway.use(requestLogger());
 gateway.use(cors());
 gateway.use(jwtAuth({ secret: (env) => env.JWT_SECRET, required: false }));
 gateway.use(cloudflareRateLimit({ binding: "API_RATE_LIMITER" }));
-gateway.use(idempotency({ binding: "IDEMPOTENCY", ttlSeconds: 86_400 }));
 
 gateway.service("users", {
   mount: "/users",
   binding: "USERS_API",
   audience: "users",
+  auth: false,
   openapi: true,
 });
 
@@ -61,6 +83,10 @@ export default gateway;
 match the `services` entry in the gateway `wrangler.jsonc`. Downstream service
 Workers should stay private: set `workers_dev: false` and do not add routes or
 custom domains to them.
+
+List `GMODE_CONTEXT_SECRET` under `secrets.required` in the gateway
+`wrangler.jsonc` so Wrangler injects it from `.dev.vars` in local dev. See
+[Auth and security](./auth-and-security.md).
 
 ## Create A Service Worker
 
@@ -95,9 +121,9 @@ service.get("/:id", {
 export default service;
 ```
 
-Services expose their internal OpenAPI document at `/__gmode/openapi.json`.
-The gateway fetches those specs over Service Bindings and serves the merged
-document at `/openapi.json`.
+Services expose internal OpenAPI at `/__gmode/openapi.json`. The gateway
+fetches those specs over Service Bindings and serves the merged document at
+`/openapi.json`.
 
 ## Standard Schema
 
@@ -151,11 +177,15 @@ service.post("/standard", {
 | Retry-safe writes | `idempotency()` |
 | Expose every API operation to AI agents | `mountMcp()` from `@gmode/mcp` |
 | Service-to-service RPC | `defineEntrypoint()` from `@gmode/rpc` |
-| Shield-flavored OpenAPI upload | `@gmode/cli` Shield commands |
+| TanStack / Vite behind the gateway | `withGmode()` / `createWebApp()` from `@gmode/web` |
+| Typed fetch client from OpenAPI | `gmode generate client` |
+| Shield-flavored OpenAPI upload | `gmode shield:*` commands |
 
 ## Next Steps
 
-- Configure bindings, secrets, rate limits, cache, and observability in [Cloudflare configuration](./cloudflare-configuration.md).
-- Add authentication and private service trust in [Auth and security](./auth-and-security.md).
-- Expose the gateway to MCP-compatible clients in [MCP server](./mcp.md).
-- Run the local example from [TESTING.md](../TESTING.md).
+- [Workspace CLI](./workspace-cli.md) — manifest, dev, deploy, codegen
+- [Cloudflare configuration](./cloudflare-configuration.md) — bindings, secrets, cache
+- [Auth and security](./auth-and-security.md) — JWT, signing, private context
+- [MCP server](./mcp.md) — AI agent access
+- [web-app-tanstack example](../examples/web-app-tanstack/README.md) — full platform demo
+- [TESTING.md](../TESTING.md) — local and CI verification

@@ -1,99 +1,119 @@
 # GMode
 
-TypeScript framework for building focused API platforms on Cloudflare Workers.
+TypeScript framework for building API platforms on Cloudflare Workers.
 
-GMode keeps the public edge small: one Gateway Worker receives traffic, applies
-shared policy, signs internal context, and forwards to private Service Workers
-through Cloudflare Service Bindings.
-
-The scope is intentionally narrow: GMode keeps the gateway/service runtime and
-does not carry over generated services, public clients, runtime-loaded workers,
-Worker Loader, or end-user code execution paths.
+GMode keeps the public edge small: one **gateway** Worker receives traffic,
+applies shared policy, signs internal context, and forwards to private
+**service** and **web** Workers through Cloudflare Service Bindings. A
+manifest-driven CLI scaffolds workspaces, syncs wrangler bindings, runs
+orchestrated local dev, and ships typed clients.
 
 ## Start Here
 
-- [Documentation index](./docs/README.md)
-- [Getting started](./docs/getting-started.md)
-- [Cloudflare configuration](./docs/cloudflare-configuration.md)
-- [Testing guide](./TESTING.md)
+| Audience | Start with |
+|---|---|
+| New app on Cloudflare | [`pnpm create gmode my-app`](./packages/create-gmode/README.md) |
+| Framework internals | [Documentation index](./docs/README.md) |
+| Gateway + service APIs | [Getting started](./docs/getting-started.md) |
+| Workspace CLI | [Workspace CLI](./docs/workspace-cli.md) |
+| Local verification | [Testing guide](./TESTING.md) |
+
+## Quick Start
+
+```bash
+pnpm create gmode my-app
+cd my-app
+pnpm install
+pnpm exec gmode new service users
+pnpm dev
+```
+
+Open http://localhost:8787/docs for aggregated Swagger, http://localhost:9100
+for the dev dashboard.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Client(["Public client"])
+    Client(["Browser / API client"])
 
-    subgraph Gateway["Gateway Worker - public"]
+    subgraph Gateway["Gateway Worker — public"]
         direction TB
-        Middleware["Middleware chain<br/>request IDs, JSON errors, CORS<br/>auth, mTLS, rate limits<br/>feature flags, idempotency, MCP"]
-        Route["Longest-prefix route matcher"]
-        Sign["Signed GatewayContext<br/>HMAC-SHA256"]
-        Docs["Aggregated OpenAPI<br/>Swagger or Scalar"]
+        Middleware["Middleware<br/>auth, CORS, rate limits, flags, MCP"]
+        Route["Route matcher"]
+        Sign["Signed GatewayContext"]
+        Docs["OpenAPI + Swagger / Scalar"]
     end
 
-    subgraph Services["Service Workers - private"]
+    subgraph Workers["Private Workers — Service Bindings"]
         Users["users-api<br/>createService + Zod"]
-        Billing["billing-api<br/>createService + RPC"]
+        Web["dashboard<br/>TanStack Start + withGmode"]
     end
 
-    Client -- "HTTPS" --> Middleware
+    Client --> Middleware
     Middleware --> Route
     Route --> Sign
     Route --> Docs
-    Sign -- "Service Binding fetch()" --> Users
-    Sign -- "Service Binding fetch()" --> Billing
-    Billing -- "WorkerEntrypoint RPC" --> Users
-    Services -. "verify x-gmode-context" .-> Sign
+    Sign --> Users
+    Sign --> Web
 ```
 
 ## Packages
 
-- `@gmode/core` - shared primitives: errors, response helpers, HMAC signing, OpenAPI helpers, Cloudflare binding helpers, sequence policy declarations, redaction, and webhooks.
-- `@gmode/gateway` - `createGateway()` plus middleware for auth, CORS, request IDs, logging, Cloudflare Rate Limiting, Flagship, mTLS, API Shield session IDs, idempotency, OpenAPI aggregation, docs, and forwarding.
-- `@gmode/service` - `createService()` with Zod or Standard Schema validation, signed gateway-context verification, route-level authorization, feature flags, sensitive-field tagging, and internal OpenAPI emission.
-- `@gmode/rpc` - typed service-to-service RPC over `WorkerEntrypoint`.
-- `@gmode/mcp` - exposes aggregated API operations as MCP catalog or operation tools.
-- `@gmode/cli` - Cloudflare API Shield commands for schema upload, discovery diffing, schema actions, and sequence exports.
-- `@gmode/testing` - mocks and test clients for Workers bindings and GMode primitives.
+| Package | Purpose |
+|---|---|
+| `@gmode/core` | Errors, HMAC signing, OpenAPI helpers, binding helpers, sequences, webhooks |
+| `@gmode/gateway` | `createGateway()`, middleware, OpenAPI aggregation, forwarding |
+| `@gmode/service` | `createService()` with Zod/Standard Schema, gateway-context trust |
+| `@gmode/rpc` | Typed `WorkerEntrypoint` RPC between services |
+| `@gmode/mcp` | MCP catalog/tools over aggregated OpenAPI |
+| `@gmode/web` | `withGmode()` + `createWebApp()` for TanStack Start / Vite SPAs behind the gateway |
+| `@gmode/client` | Typed fetch runtime used by generated clients |
+| `@gmode/cli` | Workspace CLI (`gmode`) + Cloudflare API Shield commands |
+| `@gmode/dashboard` | Prebuilt dev dashboard UI served by `gmode dev` |
+| `@gmode/testing` | Mocks and test clients for Workers bindings |
+| `create-gmode` | `pnpm create gmode` workspace scaffolder |
 
-The CLI package is published as `@gmode/cli`; its command binary is `gmode`.
+The CLI binary is `gmode` (from `@gmode/cli`).
+
+## Examples
+
+| Example | What it demonstrates |
+|---|---|
+| [gateway-basic](./examples/gateway-basic/README.md) | Gateway + users + billing, JWT, MCP, RPC |
+| [web-app-tanstack](./examples/web-app-tanstack/README.md) | Full manifest workspace, TanStack Start, `gmode dev`, codegen |
 
 ## Common Workflows
 
 | Goal | Go to |
 |---|---|
-| Build a gateway and service | [Getting started](./docs/getting-started.md) |
-| Configure Service Bindings, secrets, cache, observability, rate limits, KV | [Cloudflare configuration](./docs/cloudflare-configuration.md) |
-| Resolve and test D1, R2, Queue, and KV bindings | [Cloudflare binding helpers](./docs/cloudflare-binding-helpers.md) |
-| Add JWT, API keys, mTLS, private service context | [Auth and security](./docs/auth-and-security.md) |
-| Add retry-safe writes | [Idempotency](./docs/idempotency.md) |
-| Add globally coordinated rate limits | [Durable Object rate limiting](./docs/durable-object-rate-limiting.md) |
-| Add Cloudflare Flagship feature flags | [Feature flags](./docs/feature-flags.md) |
-| Add gateway-owned Workers Cache policy | [Workers Cache](./docs/workers-cache.md) |
-| Use OpenFeature-style flag evaluation | [OpenFeature](./docs/openfeature.md) |
-| Export request telemetry | [Telemetry](./docs/telemetry.md) |
-| Run `/v1` and `/v2` side by side | [API versioning](./docs/api-versioning.md) |
-| Choose Swagger UI or Scalar docs | [API docs UI](./docs/api-docs-ui.md) |
-| Send signed webhooks | [Webhooks](./docs/webhooks.md) |
-| Use API Shield schema validation, JWT, mTLS, sequences | [API Shield](./docs/api-shield.md) |
-| Call services with typed RPC | [Service-to-service RPC](./docs/rpc.md) |
-| Version and publish packages | [Release process](./docs/release.md) |
-| Expose the API to AI agents via MCP | [MCP server](./docs/mcp.md) |
-| Understand runtime contracts and roadmap | [Reference](./docs/reference.md) |
+| Scaffold a new workspace | [Workspace CLI](./docs/workspace-cli.md) |
+| Build a gateway and service by hand | [Getting started](./docs/getting-started.md) |
+| Configure bindings, secrets, cache | [Cloudflare configuration](./docs/cloudflare-configuration.md) |
+| Auth, signing, private context | [Auth and security](./docs/auth-and-security.md) |
+| Mount a TanStack / Vite web app | [Workspace CLI — web apps](./docs/workspace-cli.md#web-apps) |
+| Generate a typed API client | [Workspace CLI — codegen](./docs/workspace-cli.md#codegen) |
+| API Shield schema + sequences | [API Shield](./docs/api-shield.md) |
+| Expose APIs to AI agents (MCP) | [MCP server](./docs/mcp.md) |
+| Service-to-service RPC | [Service-to-service RPC](./docs/rpc.md) |
+| Run tests locally | [Testing guide](./TESTING.md) |
+| Publish to npm | [Release process](./docs/release.md) |
 
-## Quick Commands
+## Monorepo Commands
 
 ```bash
 pnpm install
 pnpm typecheck
-pnpm test
+pnpm lint
+pnpm test              # unit + integration (no live wrangler)
+pnpm test:e2e:smoke    # live wrangler / gmode dev (~80s)
 pnpm build
 pnpm changeset
 ```
 
 ## Status
 
-The focused gateway/service path, RPC path, MCP path, Cloudflare binding
-helpers, and Cloudflare API Shield CLI path are implemented and covered by
-local tests. Releases are versioned with Changesets and published by the
-GitHub release workflow.
+The gateway/service runtime, workspace CLI, web-app mounting, dev dashboard,
+typed client codegen, MCP, RPC, and API Shield CLI are implemented with unit,
+integration, and E2E smoke coverage. Packages are versioned with Changesets;
+the first public npm release is tracked in [docs/reference.md](./docs/reference.md).

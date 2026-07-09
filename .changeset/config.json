@@ -10,7 +10,11 @@
       "@gmode/rpc",
       "@gmode/cli",
       "@gmode/mcp",
-      "@gmode/testing"
+      "@gmode/testing",
+      "@gmode/web",
+      "@gmode/client",
+      "@gmode/dashboard",
+      "create-gmode"
     ]
   ],
   "linked": [],

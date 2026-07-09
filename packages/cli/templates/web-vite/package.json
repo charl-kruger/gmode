@@ -11,8 +11,8 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
-    "@gmode/service": "^0.2.0",
-    "@gmode/web": "^0.2.0",
+    "@gmode/service": "^0.1.0",
+    "@gmode/web": "^0.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

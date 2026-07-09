@@ -33,7 +33,7 @@ function deepMerge<T extends Record<string, unknown>>(
 
 export async function loadConfig(
   cli: CliEnv,
-  override?: { configPath?: string },
+  override?: { configPath?: string; requireCloudflare?: boolean },
 ): Promise<CliConfig> {
   let fileConfig: Partial<CliConfig> = {};
 
@@ -69,18 +69,29 @@ export async function loadConfig(
     envConfig as Partial<CliConfig>,
   );
 
-  if (!merged.cloudflare?.apiToken) {
-    cli.stderr(
-      "Missing Cloudflare API token. Set CLOUDFLARE_API_TOKEN or add cloudflare.apiToken to gmode.config.json.",
-    );
-    cli.exit(2);
-  }
-  if (!merged.cloudflare?.zoneId) {
-    cli.stderr(
-      "Missing Cloudflare zone ID. Set CLOUDFLARE_ZONE_ID or add cloudflare.zoneId to gmode.config.json.",
-    );
-    cli.exit(2);
+  const requireCloudflare = override?.requireCloudflare ?? true;
+  if (requireCloudflare) {
+    if (!merged.cloudflare?.apiToken) {
+      cli.stderr(
+        "Missing Cloudflare API token. Set CLOUDFLARE_API_TOKEN or add cloudflare.apiToken to gmode.config.json.",
+      );
+      cli.exit(2);
+    }
+    if (!merged.cloudflare?.zoneId) {
+      cli.stderr(
+        "Missing Cloudflare zone ID. Set CLOUDFLARE_ZONE_ID or add cloudflare.zoneId to gmode.config.json.",
+      );
+      cli.exit(2);
+    }
   }
 
   return merged;
+}
+
+/** Load optional gmode.config.json without requiring Cloudflare credentials. */
+export async function loadOptionalConfig(
+  cli: CliEnv,
+  override?: { configPath?: string },
+): Promise<Partial<CliConfig>> {
+  return loadConfig(cli, { ...override, requireCloudflare: false });
 }
