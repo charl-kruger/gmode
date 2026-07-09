@@ -622,6 +622,21 @@ async function route<Env>(
     });
   }
 
+  if (
+    match.service.kind === "web" &&
+    match.service.config.mount !== "/" &&
+    stripped === match.service.config.mount
+  ) {
+    const redirectUrl = new URL(context.url.toString());
+    redirectUrl.pathname = `${redirectUrl.pathname}/`;
+    return new Response(null, {
+      status: 308,
+      headers: {
+        location: `${redirectUrl.pathname}${redirectUrl.search}`,
+      },
+    });
+  }
+
   context.matchedService = {
     name: match.service.name,
     mount: match.service.config.mount,

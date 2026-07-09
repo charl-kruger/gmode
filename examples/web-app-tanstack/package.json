@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:deps": "../../node_modules/.bin/turbo run build --filter=@gmode/core --filter=@gmode/gateway --filter=@gmode/service --filter=@gmode/web",
     "dev": "gmode dev",
     "deploy": "gmode deploy",
     "sync": "gmode sync",

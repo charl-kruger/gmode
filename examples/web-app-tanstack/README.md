@@ -31,6 +31,10 @@ pnpm install
 pnpm build         # @gmode/* packages must be compiled to dist/
 ```
 
+This example pins Wrangler, the Cloudflare Vite plugin, and Vite to compatible
+runtime versions so the gateway Worker, API Worker, and Vite-backed dashboard
+Worker can connect through local service bindings.
+
 Then in this example:
 
 ```bash
@@ -49,7 +53,8 @@ starts:
 | URL | What you get |
 |---|---|
 | http://localhost:8787/users/u_1 | users-api through the gateway |
-| http://localhost:8787/app | TanStack Start app (SSR + HMR) |
+| http://localhost:8787/app | redirects to the dashboard app |
+| http://localhost:8787/app/ | TanStack Start app (SSR + HMR) |
 | http://localhost:8787/app/api/todos | web app's embedded typed API |
 | http://localhost:8787/openapi.json | aggregated users + web API routes |
 | http://localhost:8787/docs | Swagger UI |
@@ -70,8 +75,9 @@ pnpm exec gmode deploy --dry-run
 - `gmode.jsonc` declares the graph. `gmode sync` writes gateway wrangler
   `services[]` bindings and `gateway/src/gmode.generated.ts` with typed
   `GmodeEnv` and `registerServices(gateway)`.
-- In dev, `gmode dev` sets a dev URL so the gateway proxies `/app` to Vite
-  (HMR through the gateway). In production the Service Binding is used.
+- In dev, Wrangler connects the gateway's `DASHBOARD_APP` service binding to
+  the Cloudflare Vite dev Worker, so SSR and HMR flow through the gateway. In
+  production the same binding points at the deployed dashboard Worker.
 - `dashboard/src/server.ts` wraps TanStack Start with `withGmode()`, serving
   `/__gmode/openapi.json`, `/__gmode/health`, and `/app/api/*`.
 - Vite `base: "/app/"` and TanStack `basepath: "/app"` align with the gateway

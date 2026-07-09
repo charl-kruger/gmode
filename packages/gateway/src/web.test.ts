@@ -61,6 +61,22 @@ describe("gateway.web()", () => {
     expect(await res.text()).toBe("path=/app/settings");
   });
 
+  it("redirects the bare web app mount to its trailing-slash page", async () => {
+    const app = mockFetcher(() => new Response("ok"));
+    const gateway = buildGateway();
+    gateway.web("dashboard", { mount: "/app", binding: "APP" });
+
+    const res = await gateway.fetch(
+      new Request("https://example.com/app?tab=home"),
+      { APP: app },
+      execCtx(),
+    );
+
+    expect(res.status).toBe(308);
+    expect(res.headers.get("location")).toBe("/app/?tab=home");
+    expect(app.calls).toHaveLength(0);
+  });
+
   it("does not require auth by default even with gateway auth defaults", async () => {
     const app = mockFetcher(() => new Response("ok"));
     const gateway = createGateway<Env>({
