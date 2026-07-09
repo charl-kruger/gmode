@@ -6,20 +6,17 @@ import {
   jwtAuth,
   cloudflareRateLimit,
   requestLogger,
-  featureFlags,
 } from "@gmode/gateway";
 import { mountMcp } from "@gmode/mcp";
 import type {
   CloudflareRateLimitBinding,
   FetcherLike,
-  FlagshipBinding,
 } from "@gmode/core";
 
 type Env = {
   USERS_API: FetcherLike;
   BILLING_API: FetcherLike;
   API_RATE_LIMITER: CloudflareRateLimitBinding;
-  FLAGS: FlagshipBinding;
   JWT_SECRET: string;
   GMODE_CONTEXT_SECRET?: string;
 };
@@ -53,18 +50,6 @@ gateway.use(
     // depending on version. failOpen logs a structured warning and lets the
     // request through instead of 500ing. Flip to `false` in production if
     // you'd rather fail closed on missing/erroring bindings.
-    failOpen: true,
-  }),
-);
-gateway.use(
-  featureFlags<Env, "FLAGS">({
-    binding: "FLAGS",
-    gates: { "/billing": "billing-enabled" },
-    forward: ["new-checkout"],
-    // Local-dev safety: older Wrangler versions silently ignore the
-    // "flagship" block in wrangler.jsonc, leaving env.FLAGS undefined.
-    // failOpen lets the gateway start serving anyway; flip to `false` in
-    // production if you want the misconfiguration to surface as a 500.
     failOpen: true,
   }),
 );

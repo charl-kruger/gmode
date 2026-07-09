@@ -39,12 +39,6 @@
       },
     },
   ],
-  "flagship": [
-    {
-      "binding": "FLAGS",
-      "app_id": "4fd9de6b-0054-40c5-b7bc-6fade105f4e7",
-    },
-  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,

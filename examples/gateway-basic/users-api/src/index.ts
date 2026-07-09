@@ -1,10 +1,7 @@
 import { createService, z } from "@gmode/service";
 import { createRpcService, defineEntrypoint } from "@gmode/rpc";
-import type { FlagshipBinding } from "@gmode/core";
 
-type Env = {
-  FLAGS: FlagshipBinding;
-};
+type Env = Record<string, never>;
 
 const service = createService<Env>({
   name: "Users API",
@@ -12,7 +9,6 @@ const service = createService<Env>({
   trustGateway: {
     audience: "users",
   },
-  flags: { binding: (env) => env.FLAGS },
 });
 
 const User = z.object({
@@ -31,15 +27,13 @@ service.get("/:id", {
     200: User,
     404: service.errors.schema,
   },
-  handler: async ({ params, flags }) => {
+  handler: async ({ params }) => {
     if (params.id === "missing") {
       throw service.error.notFound("USER_NOT_FOUND", "User not found");
     }
-    const showEmail =
-      (await flags?.getBooleanValue("show-email", true)) ?? true;
     return {
       id: params.id,
-      email: showEmail ? "demo@example.com" : "",
+      email: "demo@example.com",
     };
   },
 });
@@ -48,7 +42,6 @@ service.get("/v2/:id", {
   operationId: "getUserV2",
   summary: "Get user (v2)",
   tags: ["Users"],
-  featureFlag: "users-v2",
   params: z.object({
     id: z.string(),
   }),
