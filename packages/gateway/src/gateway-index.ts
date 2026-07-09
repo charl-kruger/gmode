@@ -47,8 +47,6 @@ export type GatewayIndexMcpInfo = {
   path: string;
   mode: "catalog" | "tools";
   serverInfo: { name: string; version: string; };
-  /** Full origin (scheme + host + port) of the gateway, used to render copy-paste snippets. */
-  origin?: string;
 };
 
 export function gatewayIndexHtml<Env>(input: {
@@ -161,9 +159,7 @@ export function gatewayIndexHtml<Env>(input: {
 
   const mcp = input.mcp;
   const mcpEndpointPath = mcp ? join(mcp.path) : "";
-  const mcpFullUrl = mcp?.origin
-    ? `${mcp.origin}${mcpEndpointPath}`
-    : mcpEndpointPath;
+  const mcpEndpointUrl = mcpEndpointPath;
   const claudeConfig = mcp
     ? JSON.stringify(
       {
@@ -172,7 +168,7 @@ export function gatewayIndexHtml<Env>(input: {
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/(^-|-$)/g, "") || "gmode"]: {
-            url: mcpFullUrl,
+            url: mcpEndpointUrl,
             transport: "streamable-http",
           },
         },
@@ -183,23 +179,23 @@ export function gatewayIndexHtml<Env>(input: {
     : "";
 
   const curlInit = mcp
-    ? `curl -X POST ${mcpFullUrl} \\
+    ? `curl -X POST ${mcpEndpointUrl} \\
   -H "content-type: application/json" \\
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'`
     : "";
   const curlList = mcp
-    ? `curl -X POST ${mcpFullUrl} \\
+    ? `curl -X POST ${mcpEndpointUrl} \\
   -H "content-type: application/json" \\
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'`
     : "";
   const curlInvoke =
     mcp && mcp.mode === "catalog"
-      ? `curl -X POST ${mcpFullUrl} \\
+      ? `curl -X POST ${mcpEndpointUrl} \\
   -H "content-type: application/json" \\
   -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"discover","arguments":{"query":""}}}'`
       : mcp
         ? `# tools mode — call any operation directly by name
-curl -X POST ${mcpFullUrl} \\
+curl -X POST ${mcpEndpointUrl} \\
   -H "content-type: application/json" \\
   -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"<operationId>","arguments":{}}}'`
         : "";
@@ -216,7 +212,7 @@ curl -X POST ${mcpFullUrl} \\
       apply per call exactly like regular HTTP routes.
     </div>
     <table class="kv">
-      <tr><td class="k">endpoint</td><td class="v"><span class="str">"${escape(mcpFullUrl)}"</span></td></tr>
+      <tr><td class="k">endpoint</td><td class="v"><span class="str">"${escape(mcpEndpointUrl)}"</span></td></tr>
       <tr><td class="k">transport</td><td class="v"><span class="str">"streamable-http"</span></td></tr>
       <tr><td class="k">mode</td><td class="v"><span class="str">"${escape(mcp.mode)}"</span></td></tr>
       ${mcp.mode === "catalog"

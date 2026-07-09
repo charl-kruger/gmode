@@ -555,9 +555,12 @@ describe("gateway", () => {
     expect(html).toContain("Connect from Claude Desktop");
     expect(html).toContain("&quot;mcpServers&quot;");
     expect(html).toContain("&quot;streamable-http&quot;");
-    // Quick-test card with curl snippets — full origin appears
+    // Quick-test card with curl snippets: endpoint stays relative to the current host.
     expect(html).toContain("Quick test from your terminal");
-    expect(html).toContain("https://api.test/mcp");
+    expect(html).toContain("&quot;url&quot;: &quot;/mcp&quot;");
+    expect(html).toContain("curl -X POST /mcp");
+    expect(html).not.toContain("https://api.test/mcp");
+    expect(html).not.toContain("http://api.example.com/mcp");
     expect(html).toContain("initialize");
     expect(html).toContain("tools/list");
     expect(html).toContain("tools/call");

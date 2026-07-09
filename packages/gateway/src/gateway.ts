@@ -425,7 +425,6 @@ async function route<Env>(
               name: m.serverInfo.name,
               version: m.serverInfo.version,
             },
-            origin: context.url.origin,
           };
         }
       }
