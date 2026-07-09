@@ -16,10 +16,10 @@ cp users-api/.dev.vars.example users-api/.dev.vars
 cp billing-api/.dev.vars.example billing-api/.dev.vars
 cp gateway/.dev.vars.example gateway/.dev.vars
 
-cd gateway && pnpm dev:all
+cd gateway && pnpm dev
 ```
 
-The first config in `dev:all` is the gateway, so it is the only Worker exposed
+The first config in `pnpm dev` is the gateway, so it is the only Worker exposed
 over HTTP. The users and billing Workers are available through service bindings.
 
 If you prefer three terminals, run each package's `pnpm dev` script separately.
@@ -30,6 +30,10 @@ Those scripts pin ports as follows:
 | Gateway | `http://127.0.0.1:8787` |
 | Users API | `http://127.0.0.1:8788` |
 | Billing API | `http://127.0.0.1:8789` |
+
+For a gateway-only session, use `pnpm dev:gateway` from `gateway/`. The OpenAPI
+aggregate and Swagger UI require live service bindings, so gateway-only mode is
+not enough for `/openapi.json` unless the downstream Workers are connected.
 
 The example `wrangler.jsonc` files run `pnpm build:deps` before Wrangler
 bundles each Worker. That builds the local `@gmode/*` workspace packages so

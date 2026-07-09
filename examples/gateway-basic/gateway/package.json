@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "build:deps": "../../../node_modules/.bin/turbo run build --filter=@gmode/core --filter=@gmode/gateway --filter=@gmode/mcp --filter=@gmode/rpc --filter=@gmode/service",
-    "dev": "wrangler dev --ip 127.0.0.1 --port 8787",
+    "dev": "wrangler dev -c wrangler.jsonc -c ../users-api/wrangler.jsonc -c ../billing-api/wrangler.jsonc --ip 127.0.0.1 --port 8787",
     "dev:all": "wrangler dev -c wrangler.jsonc -c ../users-api/wrangler.jsonc -c ../billing-api/wrangler.jsonc --ip 127.0.0.1 --port 8787",
+    "dev:gateway": "wrangler dev --ip 127.0.0.1 --port 8787",
     "deploy": "wrangler deploy",
     "pretypecheck": "pnpm build:deps",
     "typecheck": "tsc --noEmit"
