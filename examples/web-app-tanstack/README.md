@@ -18,10 +18,23 @@ Swagger UI under `/app/api/*`.
 For a smaller gateway-only example (billing, MCP, RPC), see
 [gateway-basic](../gateway-basic/README.md).
 
+For install prerequisites (monorepo root `pnpm install` + `pnpm build`), see
+[examples/README.md](../README.md).
+
 ## Run locally
 
+**Prerequisites** — from the **repository root** (not this directory alone):
+
 ```bash
+corepack enable    # once per machine
 pnpm install
+pnpm build         # @gmode/* packages must be compiled to dist/
+```
+
+Then in this example:
+
+```bash
+cd examples/web-app-tanstack
 cp gateway/.dev.vars.example gateway/.dev.vars
 pnpm dev
 ```
@@ -81,3 +94,9 @@ wrangler secret put GMODE_CONTEXT_SECRET
 
 Exercised by multiple `@gmode/e2e` suites: web-app smoke, CLI, dashboard,
 client-live, and deploy dry-run.
+
+## Troubleshooting
+
+If you see `gateway.web is not a function` in `registerServices`, the
+`@gmode/gateway` package was not built. From the repo root run `pnpm install &&
+pnpm build`, then restart `pnpm dev`. See [examples/README.md](../README.md).

@@ -86,16 +86,29 @@ run is interrupted: `pkill -f "wrangler dev"; pkill -f "gmode dev"`.
 ## 2. Local end-to-end with `gmode dev` (web-app-tanstack)
 
 The fastest way to exercise the full platform (gateway + service + TanStack
-web app + dev dashboard):
+web app + dev dashboard).
+
+**Install once from the repo root** (examples use `workspace:*` and need
+compiled `packages/*/dist`):
+
+```bash
+corepack enable
+pnpm install
+pnpm build
+```
+
+Then:
 
 ```bash
 cd examples/web-app-tanstack
 cp gateway/.dev.vars.example gateway/.dev.vars
-pnpm install
 pnpm dev
 ```
 
 Then open http://localhost:8787/docs and http://localhost:9100.
+
+If you see `gateway.web is not a function`, you skipped `pnpm build` at the
+root — see [examples/README.md](./examples/README.md#troubleshooting).
 
 ---
 
@@ -106,6 +119,15 @@ talk to each other over real Service Bindings — Wrangler auto-discovers
 other locally-running Workers by name on the same machine.
 
 ### One-time setup
+
+From the **repository root**, install and build workspace packages first:
+
+```bash
+pnpm install
+pnpm build
+```
+
+Then copy dev secrets for the example:
 
 ```bash
 cd examples/gateway-basic

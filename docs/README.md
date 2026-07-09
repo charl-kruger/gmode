@@ -41,6 +41,9 @@ page that matches what you are building.
 
 ## Examples
 
+Examples are monorepo workspaces — see [examples/README.md](../examples/README.md)
+for `pnpm install` / `pnpm build` from the repo root.
+
 | Example | Description |
 |---|---|
 | [gateway-basic](../examples/gateway-basic/README.md) | Gateway + users + billing — JWT, MCP, RPC, Shield OpenAPI |

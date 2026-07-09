@@ -8,6 +8,9 @@ OpenAPI export.
 For the full manifest-driven workspace (web apps, `gmode dev`, codegen), see
 [web-app-tanstack](../web-app-tanstack/README.md).
 
+Install prerequisites: [examples/README.md](../README.md) — run `pnpm install`
+and `pnpm build` from the **repository root** before starting Workers here.
+
 ## Run locally
 
 Each Worker has its own `wrangler.jsonc`. For local development, run one

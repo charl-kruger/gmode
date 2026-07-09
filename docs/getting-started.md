@@ -9,10 +9,15 @@ Two paths:
 
 ## Install (monorepo contributors)
 
+Examples and packages use `workspace:*`. Install and build from the repo root:
+
 ```bash
+corepack enable
 pnpm install
 pnpm build
 ```
+
+To run an example after that, see [examples/README.md](../examples/README.md).
 
 ## Scaffold A Workspace
 

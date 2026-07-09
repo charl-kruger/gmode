@@ -5,6 +5,14 @@
   "compatibility_date": "2026-05-18",
   // Private service: only reachable through the gateway's Service Binding.
   "workers_dev": false,
+  "build": {
+    "command": "pnpm build:deps",
+    "watch_dir": [
+      "src",
+      "../../../packages/core/src",
+      "../../../packages/service/src",
+    ],
+  },
   "observability": {
     "enabled": true,
   },

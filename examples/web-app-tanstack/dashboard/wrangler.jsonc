@@ -6,6 +6,15 @@
   "compatibility_flags": ["nodejs_compat"],
   // Private web app: reached through the gateway's Service Binding.
   "workers_dev": false,
+  "build": {
+    "command": "pnpm build:deps",
+    "watch_dir": [
+      "src",
+      "../../../packages/core/src",
+      "../../../packages/service/src",
+      "../../../packages/web/src",
+    ],
+  },
   "observability": {
     "enabled": true,
   },

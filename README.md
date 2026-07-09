@@ -78,6 +78,10 @@ The CLI binary is `gmode` (from `@gmode/cli`).
 
 ## Examples
 
+Examples depend on local workspace packages — install from the repo root with
+`pnpm install && pnpm build` before running them. See
+[examples/README.md](./examples/README.md).
+
 | Example | What it demonstrates |
 |---|---|
 | [gateway-basic](./examples/gateway-basic/README.md) | Gateway + users + billing, JWT, MCP, RPC |

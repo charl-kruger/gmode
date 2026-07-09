@@ -7,6 +7,7 @@
     "build:deps": "../../../node_modules/.bin/turbo run build --filter=@gmode/core --filter=@gmode/gateway --filter=@gmode/rpc --filter=@gmode/service",
     "dev": "wrangler dev --ip 127.0.0.1 --port 8787",
     "deploy": "wrangler deploy",
+    "predev": "pnpm build:deps",
     "pretypecheck": "pnpm build:deps",
     "typecheck": "tsc --noEmit"
   },
