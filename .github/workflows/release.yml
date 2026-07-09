@@ -54,3 +54,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Attach SLSA provenance during `changeset publish`. Works with the
+          # token-based publish + `id-token: write`; no npm Trusted Publishing
+          # setup required.
+          NPM_CONFIG_PROVENANCE: "true"
