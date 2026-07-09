@@ -1,6 +1,6 @@
 {
   "name": "@gmode/gateway",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Focused API gateway runtime for GMode on Cloudflare Workers.",
   "repository": {
     "type": "git",

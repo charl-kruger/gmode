@@ -1,6 +1,6 @@
 {
   "name": "@gmode/client",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Typed fetch client runtime for GMode gateways — pairs with `gmode generate client`.",
   "repository": {
     "type": "git",

@@ -1,6 +1,6 @@
 {
   "name": "@gmode/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "GMode CLI: scaffold, run, and deploy Cloudflare Workers app platforms (gateway + services + web apps) with one command.",
   "repository": {
     "type": "git",

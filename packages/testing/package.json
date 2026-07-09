@@ -1,6 +1,6 @@
 {
   "name": "@gmode/testing",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Test clients and Cloudflare binding mocks for GMode.",
   "repository": {
     "type": "git",

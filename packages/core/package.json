@@ -1,6 +1,6 @@
 {
   "name": "@gmode/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Shared GMode primitives for Cloudflare Workers gateway and service packages.",
   "repository": {
     "type": "git",

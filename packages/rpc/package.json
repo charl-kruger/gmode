@@ -1,6 +1,6 @@
 {
   "name": "@gmode/rpc",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Typed WorkerEntrypoint RPC helpers for GMode services.",
   "repository": {
     "type": "git",
