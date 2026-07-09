@@ -15,7 +15,7 @@
     "clean": "turbo run clean",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "publish-packages": "pnpm -r --filter '@gmode/*' publish --access public --provenance --no-git-checks --report-summary",
+    "publish-packages": "pnpm -r --filter '@gmode/*' --filter 'create-gmode' publish --access public --provenance --no-git-checks --report-summary",
     "release": "pnpm build && pnpm publish-packages"
   },
   "repository": {
