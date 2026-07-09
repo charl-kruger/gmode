@@ -66,10 +66,30 @@ export async function startDevServers(): Promise<DevServers> {
     }),
   );
 
-  await Promise.all([
-    waitForHealth(gatewayBasicUrl, { timeoutMs: 120_000 }),
-    waitForHealth(webAppGatewayUrl, { timeoutMs: 120_000 }),
-  ]);
+  // CI runners cold-start wrangler/workerd and build two Vite apps, which is
+  // slower than a warm dev machine. Allow a longer default on CI and an
+  // explicit override.
+  const healthTimeoutMs = Number(
+    process.env["E2E_HEALTH_TIMEOUT_MS"] ??
+      (process.env["CI"] ? 240_000 : 120_000),
+  );
+
+  try {
+    await Promise.all([
+      waitForHealth(gatewayBasicUrl, { timeoutMs: healthTimeoutMs }),
+      waitForHealth(webAppGatewayUrl, { timeoutMs: healthTimeoutMs }),
+    ]);
+  } catch (err) {
+    // Surface the spawned processes' output so a health timeout is debuggable
+    // instead of an opaque "fetch failed".
+    for (const p of processes) {
+      process.stderr.write(`\n----- ${p.name} output -----\n`);
+      process.stderr.write(p.logs.join("") || "(no output captured)\n");
+      process.stderr.write(`\n----- end ${p.name} -----\n`);
+    }
+    await stopAll(processes);
+    throw err;
+  }
 
   const dashboardDeadline = Date.now() + 30_000;
   while (Date.now() < dashboardDeadline) {
