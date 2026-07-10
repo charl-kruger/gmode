@@ -1,7 +1,8 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { findManifestPath, loadManifest } from "../manifest";
+import { resolveWorkspaceBin } from "../pm";
 import { generateClientSource } from "../codegen/openapi-client";
 import { runSync } from "./sync";
 import type { CliEnv, CommandRunner } from "../types";
@@ -73,15 +74,21 @@ async function generateTypes(_args: string[], cli: CliEnv): Promise<number> {
     return 1;
   }
   const resolved = loadManifest(manifestPath);
+  const wranglerBin = resolveWorkspaceBin(resolved.rootDir, "wrangler");
   const dirs = [
     { name: "gateway", dir: resolved.gatewayDir },
     ...resolved.entries.map((e) => ({ name: e.name, dir: e.dir })),
   ];
   for (const target of dirs) {
     try {
-      execSync("pnpm exec wrangler types", {
+      execFileSync(wranglerBin, ["types"], {
         cwd: target.dir,
         stdio: ["ignore", "pipe", "pipe"],
+        env: {
+          ...process.env,
+          ...cli.env,
+          WRANGLER_SEND_METRICS: "false",
+        },
       });
       cli.stdout(`✓ ${target.name}: wrangler types`);
     } catch (err) {

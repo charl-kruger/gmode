@@ -7,6 +7,12 @@ import {
   toWorkerName,
   type WebFramework,
 } from "../manifest";
+import {
+  detectPackageManager,
+  formatCommand,
+  packageManagerByName,
+  runCommandPrefix,
+} from "../pm";
 import { scaffoldTemplate } from "../scaffold";
 import { runSync } from "./sync";
 import type { CliEnv, CommandRunner } from "../types";
@@ -53,6 +59,9 @@ export const newEntry: CommandRunner = async (args, cli: CliEnv) => {
       return 1;
     }
     const resolved = loadManifest(manifestPath);
+    const pm = resolved.manifest.packageManager
+      ? packageManagerByName(resolved.manifest.packageManager)
+      : detectPackageManager(cli.env);
     if (resolved.entries.some((e) => e.name === name)) {
       cli.stderr(`An entry named "${name}" already exists in gmode.jsonc`);
       return 1;
@@ -117,7 +126,9 @@ export const newEntry: CommandRunner = async (args, cli: CliEnv) => {
     cli.stdout(`  mount:   ${mount}`);
     cli.stdout(`  worker:  ${workerName}`);
     cli.stdout("");
-    cli.stdout("Run `pnpm install`, then `pnpm dev` to serve it through the gateway.");
+    cli.stdout(
+      `Run \`${formatCommand(pm.installCmd())}\`, then \`${runCommandPrefix(pm)} dev\` to serve it through the gateway.`,
+    );
     return 0;
   } catch (err) {
     cli.stderr(err instanceof Error ? err.message : String(err));

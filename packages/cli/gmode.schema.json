@@ -10,6 +10,11 @@
       "type": "string",
       "description": "Application name; used as the Worker name prefix."
     },
+    "packageManager": {
+      "type": "string",
+      "enum": ["npm", "pnpm", "yarn", "bun"],
+      "description": "Package manager selected when this workspace was initialized."
+    },
     "gateway": {
       "type": "object",
       "required": ["path"],

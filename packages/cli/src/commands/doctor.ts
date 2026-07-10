@@ -1,8 +1,13 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseJsonc } from "../jsonc";
 import { findManifestPath, loadManifest } from "../manifest";
+import {
+  detectPackageManager,
+  formatCommand,
+  packageManagerByName,
+} from "../pm";
 import {
   renderGeneratedModule,
   renderWranglerServices,
@@ -190,15 +195,24 @@ export const doctor: CommandRunner = async (_args, cli: CliEnv) => {
   }
 
   // Wrangler availability.
+  const pm = resolved.manifest.packageManager
+    ? packageManagerByName(resolved.manifest.packageManager)
+    : detectPackageManager(cli.env);
   try {
-    const version = execSync("pnpm exec wrangler --version", {
+    const command = pm.execCmd("wrangler", ["--version"]);
+    const version = execFileSync(command[0]!, command.slice(1), {
       cwd: resolved.rootDir,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
+      env: {
+        ...process.env,
+        ...cli.env,
+        WRANGLER_SEND_METRICS: "false",
+      },
     }).trim();
     add("wrangler is installed", true, version);
   } catch {
-    add("wrangler is installed", false, "pnpm add -D wrangler");
+    add("wrangler is installed", false, `${formatCommand(pm.installCmd())} first`);
   }
 
   printChecks(checks, cli);

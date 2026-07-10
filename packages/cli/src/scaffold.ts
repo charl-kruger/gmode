@@ -6,7 +6,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** Token replacements applied to template file contents and names. */
@@ -19,6 +19,16 @@ export type ScaffoldTokens = {
   workerName: string;
   /** Public gateway mount. */
   mount: string;
+  /** Package-manager-specific script runner, for example `npm run`. */
+  pmRun?: string;
+  /** Package-manager-specific binary runner, for example `npx`. */
+  pmExec?: string;
+  /** Package-manager-specific install command, for example `npm install`. */
+  pmInstall?: string;
+  /** Package manager name, for example `npm`. */
+  pmName?: string;
+  /** Root package.json workspaces field or an empty string. */
+  pmWorkspaces?: string;
 };
 
 function pascalCase(value: string): string {
@@ -41,6 +51,11 @@ function applyTokens(text: string, tokens: ScaffoldTokens): string {
     .replaceAll("__PASCAL_NAME__", pascalCase(tokens.name))
     .replaceAll("__CAMEL_NAME__", camelCase(tokens.name))
     .replaceAll("__MOUNT__", tokens.mount === "/" ? "" : tokens.mount)
+    .replaceAll("__PM_RUN__", tokens.pmRun ?? "")
+    .replaceAll("__PM_EXEC__", tokens.pmExec ?? "")
+    .replaceAll("__PM_INSTALL__", tokens.pmInstall ?? "")
+    .replaceAll("__PM_NAME__", tokens.pmName ?? "")
+    .replaceAll("__PM_WORKSPACES__", tokens.pmWorkspaces ?? "")
     .replaceAll("__NAME__", tokens.name);
 }
 
@@ -70,17 +85,21 @@ export function scaffoldTemplate(input: {
   targetDir: string;
   tokens: ScaffoldTokens;
   overwrite?: boolean;
+  skipFiles?: string[];
 }): string[] {
   const source = join(templatesDir(), input.template);
   if (!existsSync(source)) {
     throw new Error(`Unknown template "${input.template}"`);
   }
   const written: string[] = [];
+  const skipFiles = new Set(input.skipFiles ?? []);
 
   const walk = (fromDir: string, toDir: string) => {
     mkdirSync(toDir, { recursive: true });
     for (const entry of readdirSync(fromDir)) {
       const fromPath = join(fromDir, entry);
+      const templatePath = relative(source, fromPath);
+      if (skipFiles.has(templatePath) || skipFiles.has(entry)) continue;
       const outName = FILE_RENAMES[entry] ?? entry;
       const toPath = join(toDir, applyTokens(outName, input.tokens));
       if (statSync(fromPath).isDirectory()) {

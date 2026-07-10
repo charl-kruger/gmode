@@ -6,6 +6,11 @@ import {
   type ResolvedEntry,
   type ResolvedManifest,
 } from "../manifest";
+import {
+  detectPackageManager,
+  packageManagerByName,
+  resolveWorkspaceBin,
+} from "../pm";
 import { runSync } from "./sync";
 import {
   startCollector,
@@ -136,6 +141,10 @@ export const dev: CommandRunner = async (args, cli: CliEnv) => {
   const dashboardPort = Number(parseFlag(args, "--dashboard-port") ?? 9100);
   const noDashboard = args.includes("--no-dashboard");
   const gatewayUrl = `http://127.0.0.1:${gatewayPort}`;
+  const pm = resolved.manifest.packageManager
+    ? packageManagerByName(resolved.manifest.packageManager)
+    : detectPackageManager(cli.env);
+  const wranglerBin = resolveWorkspaceBin(resolved.rootDir, "wrangler");
 
   // Assign web app dev ports.
   const webEntries = resolved.entries.filter((e) => e.kind === "web");
@@ -196,7 +205,12 @@ export const dev: CommandRunner = async (args, cli: CliEnv) => {
   ): ChildProcess => {
     const child = spawn(command, commandArgs, {
       cwd,
-      env: { ...process.env, FORCE_COLOR: "0" },
+      env: {
+        ...process.env,
+        ...cli.env,
+        FORCE_COLOR: "0",
+        WRANGLER_SEND_METRICS: "false",
+      },
       stdio: ["ignore", "pipe", "pipe"],
     });
     pipeOutput({ child, name, color: nextColor(), cli, collector });
@@ -207,10 +221,15 @@ export const dev: CommandRunner = async (args, cli: CliEnv) => {
   // 1. Vite dev server per web app.
   for (const entry of webEntries) {
     const port = webPorts.get(entry.name)!;
+    const command = pm.runCmd("dev", [
+      "--port",
+      String(port),
+      "--strictPort",
+    ]);
     spawnManaged(
       entry.name,
-      "pnpm",
-      ["run", "dev", "--", "--port", String(port), "--strictPort"],
+      command[0]!,
+      command.slice(1),
       entry.dir,
     );
   }
@@ -227,8 +246,8 @@ export const dev: CommandRunner = async (args, cli: CliEnv) => {
     });
     const child = spawnManaged(
       "workers",
-      "pnpm",
-      ["exec", "wrangler", ...wranglerArgs],
+      wranglerBin,
+      wranglerArgs,
       resolved.rootDir,
     );
     child.on("exit", (code) => {

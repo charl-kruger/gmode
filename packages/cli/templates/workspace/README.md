@@ -5,8 +5,8 @@ A [GMode](https://github.com/charl-kruger/gmode) API platform on Cloudflare Work
 ## Develop
 
 ```bash
-pnpm install
-pnpm dev        # gateway, services, web apps, and the dev dashboard
+__PM_INSTALL__
+__PM_RUN__ dev        # gateway, services, web apps, and the dev dashboard
 ```
 
 | URL | What |
@@ -18,9 +18,9 @@ pnpm dev        # gateway, services, web apps, and the dev dashboard
 ## Add workers
 
 ```bash
-pnpm exec gmode new service payments
-pnpm exec gmode new web admin --framework tanstack-start
-pnpm exec gmode new web marketing --framework vite-react
+__PM_EXEC__ gmode new service payments
+__PM_EXEC__ gmode new web admin --framework tanstack-start
+__PM_EXEC__ gmode new web marketing --framework vite-react
 ```
 
 `gmode.jsonc` is the single source of truth. `gmode sync` (run automatically by
@@ -30,16 +30,16 @@ pnpm exec gmode new web marketing --framework vite-react
 ## Validate and codegen
 
 ```bash
-pnpm exec gmode doctor
-pnpm exec gmode generate client --url http://localhost:8787/openapi.json --out ./generated
-pnpm exec gmode generate types
+__PM_EXEC__ gmode doctor
+__PM_EXEC__ gmode generate client --url http://localhost:8787/openapi.json --out ./generated
+__PM_EXEC__ gmode generate types
 ```
 
 ## Deploy
 
 ```bash
-pnpm deploy              # services + web apps first, gateway last
-pnpm deploy --dry-run    # preview without deploying
+__PM_RUN__ deploy              # services + web apps first, gateway last
+__PM_RUN__ deploy --dry-run    # preview without deploying
 ```
 
 Set production secrets on every Worker:

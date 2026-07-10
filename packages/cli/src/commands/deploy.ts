@@ -2,6 +2,12 @@ import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { findManifestPath, type ResolvedEntry } from "../manifest";
+import {
+  detectPackageManager,
+  packageManagerByName,
+  resolveWorkspaceBin,
+  type PackageManager,
+} from "../pm";
 import { runSync } from "./sync";
 import type { CliEnv, CommandRunner } from "../types";
 
@@ -21,7 +27,11 @@ function runCommand(input: {
   return new Promise((resolve) => {
     const child = spawn(input.command, input.args, {
       cwd: input.cwd,
-      env: process.env,
+      env: {
+        ...process.env,
+        ...input.cli.env,
+        WRANGLER_SEND_METRICS: "false",
+      },
       stdio: ["ignore", "pipe", "pipe"],
     });
     const forward = (write: (line: string) => void) => (chunk: Buffer) => {
@@ -54,6 +64,8 @@ async function deployEntry(input: {
   env: string | undefined;
   dryRun: boolean;
   needsBuild: boolean;
+  pm: PackageManager;
+  wranglerBin: string;
   cli: CliEnv;
 }): Promise<number> {
   const { cli } = input;
@@ -64,9 +76,10 @@ async function deployEntry(input: {
     return 0;
   }
   if (input.needsBuild) {
+    const buildCommand = input.pm.runCmd("build");
     const buildCode = await runCommand({
-      command: "pnpm",
-      args: ["run", "build"],
+      command: buildCommand[0]!,
+      args: buildCommand.slice(1),
       cwd: input.dir,
       cli,
       name: input.name,
@@ -76,10 +89,10 @@ async function deployEntry(input: {
       return buildCode;
     }
   }
-  const deployArgs = ["exec", "wrangler", "deploy"];
+  const deployArgs = ["deploy"];
   if (input.env) deployArgs.push("--env", input.env);
   return runCommand({
-    command: "pnpm",
+    command: input.wranglerBin,
     args: deployArgs,
     cwd: input.dir,
     cli,
@@ -110,6 +123,10 @@ export const deploy: CommandRunner = async (args, cli: CliEnv) => {
     cli.stderr(err instanceof Error ? err.message : String(err));
     return 1;
   }
+  const pm = resolved.manifest.packageManager
+    ? packageManagerByName(resolved.manifest.packageManager)
+    : detectPackageManager(cli.env);
+  const wranglerBin = resolveWorkspaceBin(resolved.rootDir, "wrangler");
 
   cli.stdout(
     `Deploying "${resolved.manifest.name}": ${resolved.entries.length} worker(s) + gateway${envName ? ` (env: ${envName})` : ""}`,
@@ -125,6 +142,8 @@ export const deploy: CommandRunner = async (args, cli: CliEnv) => {
         dryRun,
         // Web apps have a Vite build step before wrangler deploy.
         needsBuild: entry.kind === "web" && hasScript(entry.dir, "build"),
+        pm,
+        wranglerBin,
         cli,
       }),
     ),
@@ -144,6 +163,8 @@ export const deploy: CommandRunner = async (args, cli: CliEnv) => {
     env: envName,
     dryRun,
     needsBuild: false,
+    pm,
+    wranglerBin,
     cli,
   });
   if (gatewayCode !== 0) {

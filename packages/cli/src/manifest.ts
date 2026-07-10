@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseJsonc } from "./jsonc";
+import type { PackageManagerName } from "./pm";
 
 /** Supported web app frameworks for `gmode new web`. */
 export type WebFramework = "tanstack-start" | "vite-react" | "custom";
@@ -49,6 +50,8 @@ export type GmodeManifest = {
   $schema?: string;
   /** Application name; used as the Worker name prefix. */
   name: string;
+  /** Package manager selected when the workspace was initialized. */
+  packageManager?: PackageManagerName;
   /** Gateway Worker location and local dev port. */
   gateway: { path: string; port?: number };
   services?: ManifestService[];
