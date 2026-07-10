@@ -1,6 +1,6 @@
 {
   "name": "@gmode/rpc",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Typed WorkerEntrypoint RPC helpers for GMode services.",
   "keywords": [
     "cloudflare",

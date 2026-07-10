@@ -1,6 +1,6 @@
 {
   "name": "@gmode/testing",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Test clients and Cloudflare binding mocks for GMode.",
   "keywords": [
     "cloudflare",
