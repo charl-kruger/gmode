@@ -63,7 +63,7 @@ export type ServiceOptions<Env> = {
   };
   /** Internal documentation route settings. */
   docs?: {
-    /** Path for this service's internal OpenAPI document. Defaults to `/internal/openapi.json`. */
+    /** Path for this service's internal OpenAPI document. Defaults to `/__gmode/openapi.json`. */
     internalOpenapi?: string;
   };
   /** Optional Flagship binding used by route feature gates and handlers. */

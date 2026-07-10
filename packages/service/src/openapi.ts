@@ -19,6 +19,27 @@ function honoToOpenApiPath(path: string): string {
   return path.replace(/:([A-Za-z0-9_]+)/g, "{$1}");
 }
 
+/**
+ * Generate a stable operationId from method + path when a route omits one,
+ * e.g. `GET /users/:id` -> `getUsersId`. MCP and client codegen skip
+ * operations without a string operationId, so every route must have one.
+ */
+function generateOperationId(method: string, path: string): string {
+  const segments = path
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => segment.replace(/^:/, ""))
+    .map((segment) => segment.replace(/[^A-Za-z0-9]+/g, " ").trim())
+    .filter(Boolean)
+    .map((segment) =>
+      segment
+        .split(" ")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(""),
+    );
+  return method.toLowerCase() + (segments.join("") || "Root");
+}
+
 function buildParams(
   location: "query" | "header",
   schema: GModeSchema | undefined,
@@ -95,7 +116,9 @@ export function buildServiceOpenApi<Env>(input: {
     }
 
     const operation: Record<string, unknown> = {
-      operationId: route.config.operationId,
+      operationId:
+        route.config.operationId ??
+        generateOperationId(route.method, route.path),
       summary: route.config.summary,
       description: route.config.description,
       tags: route.config.tags,

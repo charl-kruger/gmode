@@ -135,6 +135,17 @@ export function serializeError(input: {
   const { err, requestId, includeStack } = input;
 
   if (err instanceof ApiError) {
+    if (!err.expose) {
+      const errorBody: SerializedError["body"]["error"] = {
+        code: "INTERNAL_ERROR",
+        message: includeStack ? err.message : "Internal server error",
+        status: err.status,
+      };
+      if (requestId !== undefined) errorBody.requestId = requestId;
+      if (includeStack && err.stack) errorBody.stack = err.stack;
+      return { status: err.status, body: { error: errorBody } };
+    }
+
     const errorBody: SerializedError["body"]["error"] = {
       code: err.code,
       message: err.message,

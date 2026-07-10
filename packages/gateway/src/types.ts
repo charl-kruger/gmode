@@ -222,7 +222,7 @@ export type GatewayOptions<Env> = {
   cache?: GatewayCacheOptions<Env>;
   /** Defaults applied to services unless each service overrides them. */
   defaults?: {
-    /** Whether services require auth by default. Defaults to `true`. */
+    /** Whether services require auth by default. Defaults to `false`. */
     auth?: boolean;
     /** Scopes required by default before forwarding. */
     scopes?: string[];

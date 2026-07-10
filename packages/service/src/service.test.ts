@@ -250,6 +250,27 @@ describe("service", () => {
     );
   });
 
+  it("generates an operationId when a route omits one", async () => {
+    const service = createService({ name: "Anon", version: "1.0.0" });
+    service.get("/widgets/:widgetId", {
+      summary: "Get widget",
+      params: z.object({ widgetId: z.string() }),
+      responses: { 200: z.object({ id: z.string() }) },
+      handler: async ({ params }) => ({ id: params["widgetId"] as string }),
+    });
+    const res = await service.fetch(
+      new Request("https://svc.test/__gmode/openapi.json"),
+      {},
+      execCtx(),
+    );
+    const body = (await res.json()) as {
+      paths: Record<string, Record<string, Record<string, unknown>>>;
+    };
+    expect(body.paths["/widgets/{widgetId}"]?.["get"]?.["operationId"]).toBe(
+      "getWidgetsWidgetId",
+    );
+  });
+
   it("accepts Standard Schema validators with explicit JSON Schema for OpenAPI", async () => {
     type Env = Record<string, never>;
     const createBodySchema: StandardSchemaV1<

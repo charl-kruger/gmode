@@ -33,7 +33,7 @@ describe("error factory", () => {
 });
 
 describe("serializeError", () => {
-  it("preserves ApiError shape", () => {
+  it("keeps message and details for exposed ApiError", () => {
     const err = error.notFound("U_NOT_FOUND", "no user", { id: "1" });
     const { status, body } = serializeError({
       err,
@@ -44,6 +44,42 @@ describe("serializeError", () => {
     expect(body.error.message).toBe("no user");
     expect(body.error.requestId).toBe("req_1");
     expect(body.error.details).toEqual({ id: "1" });
+  });
+
+  it("redacts message and details for expose:false ApiError but keeps status", () => {
+    const err = new ApiError({
+      code: "DATABASE_ERROR",
+      message: "database password leaked",
+      status: 503,
+      details: { secret: "value" },
+      expose: false,
+    });
+    const { status, body } = serializeError({
+      err,
+      requestId: "req_private",
+    });
+    expect(status).toBe(503);
+    expect(body.error.status).toBe(503);
+    expect(body.error.code).toBe("INTERNAL_ERROR");
+    expect(body.error.message).toBe("Internal server error");
+    expect(body.error.requestId).toBe("req_private");
+    expect(body.error.details).toBeUndefined();
+    expect(body.error.stack).toBeUndefined();
+  });
+
+  it("reveals message and stack for expose:false ApiError when includeStack is true", () => {
+    const err = new ApiError({
+      code: "DATABASE_ERROR",
+      message: "database password leaked",
+      status: 503,
+      details: { secret: "value" },
+      expose: false,
+    });
+    const { body } = serializeError({ err, includeStack: true });
+    expect(body.error.code).toBe("INTERNAL_ERROR");
+    expect(body.error.message).toBe("database password leaked");
+    expect(body.error.details).toBeUndefined();
+    expect(body.error.stack).toContain("database password leaked");
   });
 
   it("returns 500 for unknown errors and hides internals by default", () => {
