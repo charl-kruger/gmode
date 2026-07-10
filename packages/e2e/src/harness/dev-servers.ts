@@ -44,6 +44,9 @@ export async function startDevServers(): Promise<DevServers> {
   const processes: ManagedProcess[] = [];
 
   ensureDevVars(GATEWAY_BASIC);
+  // web-app-tanstack only ships gateway/.dev.vars.example; `gmode sync`
+  // (run by `gmode dev` and the CLI suites) propagates the secret to services.
+  ensureDevVars(WEB_APP_TANSTACK);
 
   const basicPort = await getFreePort();
   const gatewayBasicUrl = `http://127.0.0.1:${basicPort}`;
