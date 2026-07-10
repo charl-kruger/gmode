@@ -3,13 +3,15 @@ import {
   logStructured,
   type CloudflareRateLimitBinding,
 } from "@gmode/core";
+import { withMutableHeaders } from "../headers";
+import { isPassthroughResponse } from "../passthrough";
 import type { GatewayMiddleware, GatewayRequestContext } from "../types";
 
 /** Options for Cloudflare's native Rate Limiting binding middleware. */
 export type CloudflareRateLimitOptions<Env, Binding extends keyof Env & string> = {
   /** Name of the `ratelimits` binding in the gateway Worker env. */
   binding: Binding;
-  /** Per-request key used for rate-limit buckets. Defaults to tenant/user/API key/path. */
+  /** Per-request key used for rate-limit buckets. Defaults to user, tenant, Cloudflare IP, or `anonymous`. */
   key?: (context: GatewayRequestContext<Env>) => string;
   /**
    * When `true`, missing or failing bindings log and allow the request.
@@ -26,16 +28,10 @@ export type CloudflareRateLimitOptions<Env, Binding extends keyof Env & string> 
 
 function defaultKey<Env>(context: GatewayRequestContext<Env>): string {
   const auth = context.auth;
-  if (auth.tenant?.id && auth.user?.id) {
-    return `${auth.tenant.id}:${auth.user.id}`;
-  }
-  if (auth.user?.id) return auth.user.id;
-  const raw = auth.raw as { keyId?: string } | undefined;
-  if (raw?.keyId) return `apikey:${raw.keyId}`;
-  if (context.matchedService) {
-    return `${context.matchedService.name}:${context.url.pathname}`;
-  }
-  return "anonymous";
+  return auth.user?.id ??
+    auth.tenant?.id ??
+    context.request.headers.get("cf-connecting-ip") ??
+    "anonymous";
 }
 
 /**
@@ -107,7 +103,9 @@ export function cloudflareRateLimit<
     }
 
     const response = await next();
-    response.headers.set("x-rate-limit-policy", "cloudflare-native");
-    return response;
+    if (isPassthroughResponse(context, response)) return response;
+    return withMutableHeaders(response, {
+      "x-rate-limit-policy": "cloudflare-native",
+    });
   };
 }

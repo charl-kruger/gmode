@@ -23,6 +23,8 @@ export type GatewayInternalsHandle<Env = unknown> = {
   services: ReadonlyArray<GatewayServiceEntry<Env>>;
   /** Resolved gateway defaults used by the route dispatcher. */
   defaults: ResolvedGatewayDefaults;
+  /** Opaque stable key for per-gateway integration caches. */
+  cacheKey?: object;
 };
 
 /**
@@ -57,8 +59,8 @@ export type AnyServiceConfig = {
 /**
  * Apply the gateway's authorization rules for a service mount:
  *   - `auth: true` requires `context.auth.authenticated`
- *   - `scopes` requires the request to hold all required scopes (with `*`/`prefix:*` wildcards)
- *   - `permissions` requires the request to hold all required permissions
+ *   - default and service `scopes` require the request to hold all required scopes (with `*`/`prefix:*` wildcards)
+ *   - default and service `permissions` require the request to hold all required permissions
  *
  * Throws an `ApiError` with the framework's standard codes
  * (`UNAUTHORIZED` / `INSUFFICIENT_SCOPE` / `INSUFFICIENT_PERMISSION`) on
@@ -77,8 +79,11 @@ export function authorizeForService(
       status: 401,
     });
   }
+  if (!authRequired) return;
 
-  const requiredScopes = service.scopes ?? [];
+  const requiredScopes = Array.from(
+    new Set([...defaults.scopes, ...(service.scopes ?? [])]),
+  );
   if (
     requiredScopes.length > 0 &&
     !matchesAllScopes(requiredScopes, context.auth.scopes)
@@ -91,7 +96,9 @@ export function authorizeForService(
     });
   }
 
-  const requiredPerms = service.permissions ?? [];
+  const requiredPerms = Array.from(
+    new Set([...defaults.permissions, ...(service.permissions ?? [])]),
+  );
   if (
     requiredPerms.length > 0 &&
     !matchesAllScopes(requiredPerms, context.auth.permissions)

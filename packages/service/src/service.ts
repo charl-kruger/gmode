@@ -53,6 +53,18 @@ function anonymousGatewayContext(audience: string): GatewayContext {
   };
 }
 
+function normalizeBasePath(basePath: string | undefined): string {
+  if (!basePath || basePath === "/") return "";
+  const withLeading = basePath.startsWith("/") ? basePath : `/${basePath}`;
+  return withLeading.replace(/\/+$/, "");
+}
+
+function joinBasePath(basePath: string, path: string): string {
+  if (!basePath) return path;
+  if (path === "/") return basePath;
+  return `${basePath}${path}`;
+}
+
 function authorizeForRoute(
   config: RouteConfig<unknown>,
   scopes: string[],
@@ -200,11 +212,13 @@ export class ServiceImpl<Env> implements Service<Env> {
   private readonly app: Hono<ServiceEnv<Env>>;
   private readonly routes: RegisteredRoute<Env>[] = [];
   private readonly internalOpenapiPath: string;
+  private readonly basePath: string;
 
   constructor(options: ServiceOptions<Env>) {
     this.options = options;
     this.name = options.name;
     this.version = options.version;
+    this.basePath = normalizeBasePath(options.basePath);
     this.internalOpenapiPath =
       options.docs?.internalOpenapi ?? "/__gmode/openapi.json";
 
@@ -224,6 +238,7 @@ export class ServiceImpl<Env> implements Service<Env> {
         name: this.name,
         version: this.version,
         routes: this.routes,
+        basePath: this.basePath,
       });
       return c.json(doc);
     });
@@ -241,6 +256,7 @@ export class ServiceImpl<Env> implements Service<Env> {
     config: RouteConfig<Env>,
   ): Service<Env> {
     this.routes.push({ method, path, config });
+    const registeredPath = joinBasePath(this.basePath, path);
 
     const handler = async (c: HonoContext<ServiceEnv<Env>>): Promise<Response> => {
       const request = c.req.raw;
@@ -360,19 +376,19 @@ export class ServiceImpl<Env> implements Service<Env> {
 
     switch (method) {
       case "get":
-        this.app.get(path, handler);
+        this.app.get(registeredPath, handler);
         break;
       case "post":
-        this.app.post(path, handler);
+        this.app.post(registeredPath, handler);
         break;
       case "put":
-        this.app.put(path, handler);
+        this.app.put(registeredPath, handler);
         break;
       case "patch":
-        this.app.patch(path, handler);
+        this.app.patch(registeredPath, handler);
         break;
       case "delete":
-        this.app.delete(path, handler);
+        this.app.delete(registeredPath, handler);
         break;
     }
 

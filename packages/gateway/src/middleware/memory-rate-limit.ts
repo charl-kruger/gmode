@@ -1,4 +1,6 @@
 import { ApiError } from "@gmode/core";
+import { withMutableHeaders } from "../headers";
+import { isPassthroughResponse } from "../passthrough";
 import type { GatewayMiddleware, GatewayRequestContext } from "../types";
 
 type Bucket = { count: number; expiresAt: number };
@@ -44,8 +46,8 @@ export function memoryRateLimit<Env>(options: {
     }
 
     const response = await next();
-    response.headers.set("x-rate-limit-policy", "memory");
-    return response;
+    if (isPassthroughResponse(context, response)) return response;
+    return withMutableHeaders(response, { "x-rate-limit-policy": "memory" });
   };
 }
 

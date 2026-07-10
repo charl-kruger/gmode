@@ -691,6 +691,52 @@ describe("MCP protocol over POST /mcp", () => {
     const names = reply.result.tools.map((t) => t.name).sort();
     expect(names).toEqual(["createInvoice", "getUser", "listUsers"]);
   });
+
+  it("caches the MCP catalog across tools/list calls within the TTL", async () => {
+    const users = buildUsersService();
+    const billing = buildBillingService();
+    let openapiFetches = 0;
+    const countingFetcher = <E,>(
+      svc: {
+        fetch(req: Request, env: E, ctx: ExecutionContext): Promise<Response>;
+      },
+      env: E,
+    ): FetcherLike => ({
+      fetch: (req) => {
+        if (new URL(req.url).pathname.endsWith("/openapi.json")) {
+          openapiFetches += 1;
+        }
+        return svc.fetch(req, env, execCtx());
+      },
+    });
+    const env: GwEnv = {
+      USERS_API: countingFetcher(users, {}),
+      BILLING_API: countingFetcher(billing, {}),
+      JWT_SECRET,
+    };
+    const gateway = createGateway<GwEnv>({
+      name: "T",
+      version: "1.0.0",
+    });
+    gateway.use(requestId());
+    gateway.use(jsonErrors());
+    gateway.use(mountMcp<GwEnv>({ mode: "tools", catalogTtlSeconds: 60 }));
+    gateway.service("users", { mount: "/users", binding: "USERS_API", openapi: true });
+    gateway.service("billing", { mount: "/billing", binding: "BILLING_API", openapi: true });
+
+    await postRpc(gateway, env, {
+      jsonrpc: "2.0",
+      id: 9,
+      method: "tools/list",
+    });
+    await postRpc(gateway, env, {
+      jsonrpc: "2.0",
+      id: 10,
+      method: "tools/list",
+    });
+
+    expect(openapiFetches).toBe(2);
+  });
 });
 
 describe("MCP OAuth provider", () => {

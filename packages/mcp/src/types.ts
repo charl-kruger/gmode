@@ -58,6 +58,12 @@ export type MountMcpOptions<Env = unknown> = {
   serverInfo?: { name: string; version: string };
 
   /**
+   * Seconds to cache the aggregated MCP catalog per gateway isolate.
+   * Default: 60. Set to 0 to disable caching.
+   */
+  catalogTtlSeconds?: number;
+
+  /**
    * Optional whitelist of operationIds (after gateway collision-rewriting).
    * Wildcards: `*` matches any chars, `?` matches one. If set, only matching
    * operations are exposed. include + exclude can both be set; exclude wins
@@ -92,6 +98,7 @@ export type ResolvedMcpOptions<Env = unknown> = {
   include: string[];
   exclude: string[];
   maxToolsInToolsMode: number;
+  catalogTtlSeconds: number;
   oauth?: McpOAuthProvider<Env>;
 };
 

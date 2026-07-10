@@ -9,8 +9,10 @@ import { createGateway } from "./create-gateway";
 import { requestId } from "./middleware/request-id";
 import { jsonErrors } from "./middleware/json-errors";
 import { cloudflareRateLimit } from "./middleware/cloudflare-rate-limit";
+import { sessionHeader } from "./middleware/session-header";
 import { cors } from "./middleware/cors";
 import { idempotency } from "./middleware/idempotency";
+import type { GatewayRequestContext } from "./types";
 
 type FetcherCall = {
   request: Request;
@@ -59,6 +61,27 @@ function execCtx(): ExecutionContext {
     waitUntil() { },
     passThroughOnException() { },
   } as ExecutionContext;
+}
+
+function middlewareContext(
+  request = new Request("https://api.test/users/1"),
+): GatewayRequestContext<Env> {
+  return {
+    request,
+    env: {
+      USERS_API: mockFetcher(() => new Response("{}")),
+      RL: mockRateLimit(),
+    },
+    executionContext: execCtx(),
+    url: new URL(request.url),
+    requestId: "req_test",
+    auth: {
+      authenticated: false,
+      scopes: [],
+      permissions: [],
+    },
+    state: new Map(),
+  };
 }
 
 type MockKv = {
@@ -692,6 +715,106 @@ describe("gateway", () => {
     );
     expect(res.status).toBe(200);
     expect(res.headers.get("x-rate-limit-policy")).toBe("cloudflare-native");
+  });
+
+  it("cloudflareRateLimit default key uses auth user before routing", async () => {
+    const users = mockFetcher(() => new Response("{}"));
+    const rl = mockRateLimit(true);
+    const gateway = createGateway<Env>({
+      name: "T",
+      version: "1.0.0",
+    });
+    gateway.use((context, next) => {
+      context.auth = {
+        authenticated: true,
+        user: { id: "user_1" },
+        tenant: { id: "tenant_1" },
+        scopes: [],
+        permissions: [],
+      };
+      return next();
+    });
+    gateway.use(cloudflareRateLimit({ binding: "RL" }));
+    gateway.service("users", { mount: "/users", binding: "USERS_API" });
+
+    const res = await gateway.fetch(
+      new Request("https://api.test/users/1", {
+        headers: { "cf-connecting-ip": "203.0.113.10" },
+      }),
+      {
+        USERS_API: users,
+        RL: rl,
+      } as Env,
+      execCtx(),
+    );
+    expect(res.status).toBe(200);
+    expect(rl.calls).toEqual([{ key: "user_1" }]);
+  });
+
+  it("cloudflareRateLimit default key falls back to Cloudflare IP", async () => {
+    const users = mockFetcher(() => new Response("{}"));
+    const rl = mockRateLimit(true);
+    const gateway = createGateway<Env>({
+      name: "T",
+      version: "1.0.0",
+    });
+    gateway.use(cloudflareRateLimit({ binding: "RL" }));
+    gateway.service("users", { mount: "/users", binding: "USERS_API" });
+
+    const res = await gateway.fetch(
+      new Request("https://api.test/users/1", {
+        headers: { "cf-connecting-ip": "203.0.113.10" },
+      }),
+      {
+        USERS_API: users,
+        RL: rl,
+      } as Env,
+      execCtx(),
+    );
+    expect(res.status).toBe(200);
+    expect(rl.calls).toEqual([{ key: "203.0.113.10" }]);
+  });
+
+  it("rate-limit and session middleware clone immutable response headers", async () => {
+    const redirect = () => Response.redirect("https://api.test/next", 302);
+
+    const rl = mockRateLimit(true);
+    const cfContext = middlewareContext();
+    cfContext.env = {
+      USERS_API: mockFetcher(() => new Response("{}")),
+      RL: rl,
+    };
+    const cfResponse = await cloudflareRateLimit<Env, "RL">({
+      binding: "RL",
+      key: () => "k",
+    })(cfContext, async () => redirect());
+    expect(cfResponse.headers.get("x-rate-limit-policy")).toBe(
+      "cloudflare-native",
+    );
+
+    const { memoryRateLimit, __resetMemoryRateLimit } = await import(
+      "./middleware/memory-rate-limit"
+    );
+    __resetMemoryRateLimit();
+    const memoryResponse = await memoryRateLimit<Env>({
+      limit: 1,
+      windowSeconds: 60,
+      key: () => "k",
+    })(middlewareContext(), async () => redirect());
+    expect(memoryResponse.headers.get("x-rate-limit-policy")).toBe("memory");
+
+    const sessionContext = middlewareContext();
+    sessionContext.auth = {
+      authenticated: true,
+      user: { id: "user_1" },
+      scopes: [],
+      permissions: [],
+    };
+    const sessionResponse = await sessionHeader<Env>()(
+      sessionContext,
+      async () => redirect(),
+    );
+    expect(sessionResponse.headers.get("cf-session-id")).toBe("user_1");
   });
 
   it("CORS preflight returns 204", async () => {

@@ -22,6 +22,7 @@ function resolveOptions<Env>(
     include: options?.include ?? [],
     exclude: options?.exclude ?? [],
     maxToolsInToolsMode: options?.maxToolsInToolsMode ?? 100,
+    catalogTtlSeconds: options?.catalogTtlSeconds ?? 60,
   };
   if (options?.oauth) {
     resolved.oauth = options.oauth;

@@ -3,6 +3,8 @@ import {
   resolveEnvValue,
   type EnvResolver,
 } from "@gmode/core";
+import { withMutableHeaders } from "../headers";
+import { isPassthroughResponse } from "../passthrough";
 import type { GatewayMiddleware, GatewayRequestContext } from "../types";
 
 export const SHIELD_SESSION_HEADER = "cf-session-id";
@@ -56,8 +58,12 @@ export function sessionHeader<Env>(
     }
 
     const response = await next();
-    if (sessionId && !response.headers.has(header)) {
-      response.headers.set(header, sessionId);
+    if (
+      sessionId &&
+      !response.headers.has(header) &&
+      !isPassthroughResponse(context, response)
+    ) {
+      return withMutableHeaders(response, { [header]: sessionId });
     }
     return response;
   };

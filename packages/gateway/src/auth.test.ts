@@ -140,4 +140,137 @@ describe("jwtAuth", () => {
     );
     expect(res.status).toBe(401);
   });
+
+  it("enforces default scopes together with service scopes when auth is required", async () => {
+    const users = mockFetcher(() => new Response("{}"));
+    const gateway = createGateway<Env>({
+      name: "T",
+      version: "1.0.0",
+      defaults: {
+        auth: true,
+        scopes: ["gateway:read"],
+      },
+    });
+    gateway.use(requestId());
+    gateway.use(jsonErrors());
+    gateway.use(jwtAuth<Env>({
+      secret: () => JWT_SECRET,
+      required: true,
+    }));
+    gateway.service("users", {
+      mount: "/users",
+      binding: "USERS_API",
+      scopes: ["users:read"],
+    });
+
+    const now = Math.floor(Date.now() / 1000);
+    const missingDefault = await makeJwt({
+      sub: "user_1",
+      exp: now + 60,
+      scopes: ["users:read"],
+    });
+    const denied = await gateway.fetch(
+      new Request("https://api.test/users/1", {
+        headers: { authorization: `Bearer ${missingDefault}` },
+      }),
+      {
+        USERS_API: users,
+        RL: {} as CloudflareRateLimitBinding,
+      },
+      execCtx(),
+    );
+    expect(denied.status).toBe(403);
+    const body = (await denied.json()) as {
+      error: { code: string; details: { required: string[]; }; };
+    };
+    expect(body.error.code).toBe("INSUFFICIENT_SCOPE");
+    expect(body.error.details.required).toEqual([
+      "gateway:read",
+      "users:read",
+    ]);
+
+    const allScopes = await makeJwt({
+      sub: "user_1",
+      exp: now + 60,
+      scopes: ["gateway:read", "users:read"],
+    });
+    const allowed = await gateway.fetch(
+      new Request("https://api.test/users/1", {
+        headers: { authorization: `Bearer ${allScopes}` },
+      }),
+      {
+        USERS_API: users,
+        RL: {} as CloudflareRateLimitBinding,
+      },
+      execCtx(),
+    );
+    expect(allowed.status).toBe(200);
+  });
+
+  it("enforces default permissions together with service permissions when service auth is required", async () => {
+    const users = mockFetcher(() => new Response("{}"));
+    const gateway = createGateway<Env>({
+      name: "T",
+      version: "1.0.0",
+      defaults: {
+        auth: false,
+        permissions: ["gateway:view"],
+      },
+    });
+    gateway.use(requestId());
+    gateway.use(jsonErrors());
+    gateway.use(jwtAuth<Env>({
+      secret: () => JWT_SECRET,
+      required: true,
+    }));
+    gateway.service("users", {
+      mount: "/users",
+      binding: "USERS_API",
+      auth: true,
+      permissions: ["users:view"],
+    });
+
+    const now = Math.floor(Date.now() / 1000);
+    const missingServicePerm = await makeJwt({
+      sub: "user_1",
+      exp: now + 60,
+      permissions: ["gateway:view"],
+    });
+    const denied = await gateway.fetch(
+      new Request("https://api.test/users/1", {
+        headers: { authorization: `Bearer ${missingServicePerm}` },
+      }),
+      {
+        USERS_API: users,
+        RL: {} as CloudflareRateLimitBinding,
+      },
+      execCtx(),
+    );
+    expect(denied.status).toBe(403);
+    const body = (await denied.json()) as {
+      error: { code: string; details: { required: string[]; }; };
+    };
+    expect(body.error.code).toBe("INSUFFICIENT_PERMISSION");
+    expect(body.error.details.required).toEqual([
+      "gateway:view",
+      "users:view",
+    ]);
+
+    const allPerms = await makeJwt({
+      sub: "user_1",
+      exp: now + 60,
+      permissions: ["gateway:view", "users:view"],
+    });
+    const allowed = await gateway.fetch(
+      new Request("https://api.test/users/1", {
+        headers: { authorization: `Bearer ${allPerms}` },
+      }),
+      {
+        USERS_API: users,
+        RL: {} as CloudflareRateLimitBinding,
+      },
+      execCtx(),
+    );
+    expect(allowed.status).toBe(200);
+  });
 });

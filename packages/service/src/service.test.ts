@@ -250,6 +250,72 @@ describe("service", () => {
     );
   });
 
+  it("serves routes and OpenAPI paths under basePath", async () => {
+    const service = createService({
+      name: "Base API",
+      version: "1.0.0",
+      basePath: "base/",
+    });
+    service.get("/x", {
+      operationId: "getX",
+      responses: { 200: z.object({ ok: z.boolean() }) },
+      handler: () => ({ ok: true }),
+    });
+
+    const direct = await service.fetch(
+      new Request("https://svc.test/x"),
+      {},
+      execCtx(),
+    );
+    expect(direct.status).toBe(404);
+
+    const routed = await service.fetch(
+      new Request("https://svc.test/base/x"),
+      {},
+      execCtx(),
+    );
+    expect(routed.status).toBe(200);
+
+    const openapi = await service.fetch(
+      new Request("https://svc.test/__gmode/openapi.json"),
+      {},
+      execCtx(),
+    );
+    const doc = (await openapi.json()) as {
+      paths: Record<string, unknown>;
+    };
+    expect(Object.keys(doc.paths)).toEqual(["/base/x"]);
+  });
+
+  it("leaves routes and OpenAPI paths unchanged without basePath", async () => {
+    const service = createService({
+      name: "Plain API",
+      version: "1.0.0",
+    });
+    service.get("/x", {
+      operationId: "getX",
+      responses: { 200: z.object({ ok: z.boolean() }) },
+      handler: () => ({ ok: true }),
+    });
+
+    const routed = await service.fetch(
+      new Request("https://svc.test/x"),
+      {},
+      execCtx(),
+    );
+    expect(routed.status).toBe(200);
+
+    const openapi = await service.fetch(
+      new Request("https://svc.test/__gmode/openapi.json"),
+      {},
+      execCtx(),
+    );
+    const doc = (await openapi.json()) as {
+      paths: Record<string, unknown>;
+    };
+    expect(Object.keys(doc.paths)).toEqual(["/x"]);
+  });
+
   it("generates an operationId when a route omits one", async () => {
     const service = createService({ name: "Anon", version: "1.0.0" });
     service.get("/widgets/:widgetId", {

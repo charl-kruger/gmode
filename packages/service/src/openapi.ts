@@ -19,6 +19,12 @@ function honoToOpenApiPath(path: string): string {
   return path.replace(/:([A-Za-z0-9_]+)/g, "{$1}");
 }
 
+function joinPaths(basePath: string | undefined, path: string): string {
+  if (!basePath) return path;
+  if (path === "/") return basePath;
+  return `${basePath}${path}`;
+}
+
 /**
  * Generate a stable operationId from method + path when a route omits one,
  * e.g. `GET /users/:id` -> `getUsersId`. MCP and client codegen skip
@@ -89,11 +95,12 @@ export function buildServiceOpenApi<Env>(input: {
   name: string;
   version: string;
   routes: RegisteredRoute<Env>[];
+  basePath?: string;
 }): OpenApiDocument {
   const paths: Record<string, Record<string, unknown>> = {};
 
   for (const route of input.routes) {
-    const oasPath = honoToOpenApiPath(route.path);
+    const oasPath = honoToOpenApiPath(joinPaths(input.basePath, route.path));
     const parameters: ParamObject[] = [
       ...buildPathParams(route.path, route.config.params),
       ...buildParams("query", route.config.query),

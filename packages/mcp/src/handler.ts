@@ -34,6 +34,11 @@ import type {
 
 const MCP_PROTOCOL_VERSION = "2025-06-18";
 
+const catalogCache = new WeakMap<
+  object,
+  { catalog: McpServerCatalog; expiresAt: number; }
+>();
+
 async function buildCatalog<Env>(
   context: GatewayRequestContext<Env>,
   options: ResolvedMcpOptions<Env>,
@@ -44,6 +49,16 @@ async function buildCatalog<Env>(
       "Gateway internals unavailable to MCP handler",
     );
   }
+  const cacheKey =
+    (internals as typeof internals & { cacheKey?: object; }).cacheKey ??
+    internals.services;
+  const ttlMs = options.catalogTtlSeconds * 1000;
+  if (ttlMs > 0) {
+    const cached = catalogCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.catalog;
+    }
+  }
   const spec = await aggregateOpenApi({
     context,
     env: context.env,
@@ -53,7 +68,14 @@ async function buildCatalog<Env>(
     },
     services: [...internals.services],
   });
-  return buildMountIndex({ spec, internals, options });
+  const catalog = buildMountIndex({ spec, internals, options });
+  if (ttlMs > 0) {
+    catalogCache.set(cacheKey, {
+      catalog,
+      expiresAt: Date.now() + ttlMs,
+    });
+  }
+  return catalog;
 }
 
 function listTools<Env>(

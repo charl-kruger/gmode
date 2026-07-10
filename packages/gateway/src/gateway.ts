@@ -15,6 +15,7 @@ import {
 } from "./authorize";
 import { forwardToService } from "./forward";
 import { fetchBindingGet, internalPathForEntry } from "./internal-fetch";
+import { withMutableHeaders } from "./headers";
 import {
   gatewayIndexHtml,
   type GatewayIndexFlagsInfo,
@@ -184,23 +185,6 @@ function deprecationHeaders(
   return headers;
 }
 
-function withMutableHeaders(
-  response: Response,
-  extra: HeadersInit | undefined,
-): Response {
-  const headers = new Headers(response.headers);
-  if (extra) {
-    new Headers(extra).forEach((value, key) => {
-      headers.set(key, value);
-    });
-  }
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-}
-
 function resolveGatewayCacheValue<Env, T>(
   value: T | ((context: GatewayRequestContext<Env>) => T),
   context: GatewayRequestContext<Env>,
@@ -342,6 +326,7 @@ async function handleRequest<Env>(
   context.state.set(GATEWAY_INTERNALS_STATE_KEY, {
     services: internals.services,
     defaults: internals.defaults,
+    cacheKey: internals,
   });
 
   const middleware = internals.middleware;

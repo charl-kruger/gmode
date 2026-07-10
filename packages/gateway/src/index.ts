@@ -85,4 +85,5 @@ export type {
 export { forwardToService } from "./forward";
 export type { ForwardInput } from "./forward";
 export { aggregateOpenApi } from "./openapi-aggregate";
+export { withMutableHeaders } from "./headers";
 export type { GatewayServiceEntry } from "./types";
