@@ -2,21 +2,41 @@
   "name": "create-gmode",
   "version": "0.1.1",
   "description": "Create a GMode app platform on Cloudflare Workers with one command: `pnpm create gmode my-app`.",
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "cloudflare-workers",
+    "api",
+    "gateway",
+    "typescript",
+    "create",
+    "scaffold",
+    "starter",
+    "template"
+  ],
+  "license": "MIT",
+  "author": "Charl Kruger",
+  "homepage": "https://github.com/charl-kruger/gmode#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/charl-kruger/gmode.git",
     "directory": "packages/create-gmode"
   },
+  "bugs": "https://github.com/charl-kruger/gmode/issues",
   "publishConfig": {
     "access": "public"
   },
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "bin": {
     "create-gmode": "./dist/bin.js"
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup src/bin.ts --format esm --clean",

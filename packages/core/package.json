@@ -2,15 +2,35 @@
   "name": "@gmode/core",
   "version": "0.1.1",
   "description": "Shared GMode primitives for Cloudflare Workers gateway and service packages.",
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "cloudflare-workers",
+    "api",
+    "gateway",
+    "typescript",
+    "openapi",
+    "hmac",
+    "webhooks",
+    "errors"
+  ],
+  "license": "MIT",
+  "author": "Charl Kruger",
+  "homepage": "https://github.com/charl-kruger/gmode#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/charl-kruger/gmode.git",
     "directory": "packages/core"
   },
+  "bugs": "https://github.com/charl-kruger/gmode/issues",
   "publishConfig": {
     "access": "public"
   },
   "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,7 +42,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --clean",

@@ -30,7 +30,7 @@
     "api"
   ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@biomejs/biome": "^2.5.2",
     "@changesets/cli": "2.31.0",

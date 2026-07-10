@@ -2,15 +2,34 @@
   "name": "@gmode/testing",
   "version": "0.1.1",
   "description": "Test clients and Cloudflare binding mocks for GMode.",
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "cloudflare-workers",
+    "api",
+    "gateway",
+    "typescript",
+    "testing",
+    "mocks",
+    "vitest"
+  ],
+  "license": "MIT",
+  "author": "Charl Kruger",
+  "homepage": "https://github.com/charl-kruger/gmode#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/charl-kruger/gmode.git",
     "directory": "packages/testing"
   },
+  "bugs": "https://github.com/charl-kruger/gmode/issues",
   "publishConfig": {
     "access": "public"
   },
   "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,7 +41,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --clean",

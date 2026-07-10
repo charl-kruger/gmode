@@ -2,21 +2,41 @@
   "name": "@gmode/cli",
   "version": "0.1.1",
   "description": "GMode CLI: scaffold, run, and deploy Cloudflare Workers app platforms (gateway + services + web apps) with one command.",
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "cloudflare-workers",
+    "api",
+    "gateway",
+    "typescript",
+    "cli",
+    "scaffold",
+    "wrangler",
+    "deploy",
+    "api-shield"
+  ],
+  "license": "MIT",
+  "author": "Charl Kruger",
+  "homepage": "https://github.com/charl-kruger/gmode#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/charl-kruger/gmode.git",
     "directory": "packages/cli"
   },
+  "bugs": "https://github.com/charl-kruger/gmode/issues",
   "publishConfig": {
     "access": "public"
   },
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "bin": {
     "gmode": "./dist/bin.js"
   },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -27,7 +47,8 @@
     "dist",
     "templates",
     "gmode.schema.json",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup src/index.ts src/bin.ts --format esm --dts --clean",
