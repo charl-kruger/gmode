@@ -1,6 +1,5 @@
 import { ApiError } from "@gmode/core";
-import { zodToJsonSchema } from "zod-to-json-schema";
-import type { ZodTypeAny } from "zod";
+import { z, type ZodTypeAny } from "zod";
 
 /** Validation issue shape from the Standard Schema v1 contract. */
 export type StandardSchemaIssue = {
@@ -173,9 +172,9 @@ export function schemaToJsonSchema(
   schema: GModeSchema,
 ): Record<string, unknown> {
   if (isZodSchema(schema)) {
-    return zodToJsonSchema(schema, {
-      $refStrategy: "none",
-      target: "openApi3",
+    return z.toJSONSchema(schema, {
+      target: "draft-7",
+      unrepresentable: "any",
     }) as Record<string, unknown>;
   }
   if (isJsonSchemaBackedStandardSchema(schema)) {
