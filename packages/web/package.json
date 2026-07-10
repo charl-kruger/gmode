@@ -1,6 +1,6 @@
 {
   "name": "@gmode/web",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Run full web apps (TanStack Start, Vite SPAs) as GMode gateway services with typed, documented APIs.",
   "keywords": [
     "cloudflare",

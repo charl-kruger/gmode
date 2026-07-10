@@ -1,6 +1,6 @@
 {
   "name": "create-gmode",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Create a GMode app platform on Cloudflare Workers with one command: `pnpm create gmode my-app`.",
   "keywords": [
     "cloudflare",
