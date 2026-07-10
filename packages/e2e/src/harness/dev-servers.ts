@@ -1,4 +1,7 @@
+import { copyFileSync, existsSync, readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
 import {
+  GATEWAY_BASIC,
   GATEWAY_BASIC_GATEWAY,
   gmodeBin,
   repoBin,
@@ -12,6 +15,23 @@ import {
   stopAll,
 } from "./process";
 
+/**
+ * Provision `.dev.vars` from `.dev.vars.example` for every Worker in an
+ * example. `.dev.vars` is gitignored, so CI checkouts don't have it — the
+ * smoke assertions (JWT auth, signed gateway context) rely on the example
+ * secrets, and wrangler needs the files to exist at startup.
+ */
+function ensureDevVars(exampleDir: string): void {
+  for (const entry of readdirSync(exampleDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const example = join(exampleDir, entry.name, ".dev.vars.example");
+    const target = join(dirname(example), ".dev.vars");
+    if (existsSync(example) && !existsSync(target)) {
+      copyFileSync(example, target);
+    }
+  }
+}
+
 export type DevServers = {
   gatewayBasicUrl: string;
   webAppGatewayUrl: string;
@@ -22,6 +42,8 @@ export type DevServers = {
 /** Start shared dev servers for the full E2E run (called from globalSetup). */
 export async function startDevServers(): Promise<DevServers> {
   const processes: ManagedProcess[] = [];
+
+  ensureDevVars(GATEWAY_BASIC);
 
   const basicPort = await getFreePort();
   const gatewayBasicUrl = `http://127.0.0.1:${basicPort}`;
