@@ -1,48 +1,55 @@
 # @gmode/web
+Run TanStack Start, Vite SPAs, and other Worker web apps behind a GMode gateway with typed embedded APIs.
 
-Mount TanStack Start and Vite React apps as GMode gateway services with
-embedded typed APIs and OpenAPI aggregation.
+## Install
 
-## `withGmode()`
+```bash
+npm i @gmode/web
+```
 
-Wrap a TanStack Start (or similar) server handler to serve internal routes and
-an optional embedded API:
+Installs `@gmode/core`. Add `@gmode/service` when the web app exposes typed API routes.
+
+## Quick example
 
 ```ts
-import { withGmode } from "@gmode/web";
 import { createService, z } from "@gmode/service";
-import handler from "@tanstack/react-start/server-entry";
+import { createWebApp, withGmode } from "@gmode/web";
 
-const api = createService({ name: "App API", version: "1.0.0" });
-api.get("/todos", {
-  operationId: "listTodos",
-  responses: { 200: z.object({ data: z.array(Todo) }) },
-  handler: async () => ({ data: [] }),
+type Env = { ASSETS: { fetch(request: Request): Promise<Response> } };
+const api = createService<Env>({ name: "Web API", version: "1.0.0" });
+
+api.get("/me", {
+  responses: { 200: z.object({ id: z.string() }) },
+  handler: ({ ok }) => ok({ id: "u_1" }),
 });
 
-export default withGmode(handler, {
+export const tanstack = withGmode<Env>(
+  (request) => new Response(`SSR ${new URL(request.url).pathname}`),
+  { basePath: "/app", api: { service: api, mount: "/api" } },
+);
+
+export default createWebApp<Env>({
   basePath: "/app",
-  apiMount: "/api",
-  api: api.handler,
-  openapi: true,
+  api: { service: api, mount: "/api" },
 });
 ```
 
-`withGmode()` serves:
+`basePath` must match the gateway `web({ mount })` because web forwarding keeps the public prefix so SSR routes, SPA history, assets, and HMR still see the same path users requested.
 
-- `{basePath}/__gmode/health` — health probe for the gateway
-- `{basePath}{apiMount}/openapi.json` — OpenAPI for aggregation
-- `{basePath}{apiMount}/*` — embedded API routes
-- Everything else — passed through to the framework handler (SSR, assets)
+## API
 
-## `createWebApp()`
+| Export | Purpose |
+|---|---|
+| `withGmode` | Wrap a fetch-shaped framework handler with GMode API and internal docs routes. |
+| `createWebApp` | Static/SPA Worker entry that serves assets plus optional typed API routes. |
+| `WithGmodeOptions`, `GmodeWebApiOptions` | Web app base path and embedded API options. |
+| `WebFrameworkHandler`, `ServiceLike` | Structural handler and service types. |
+| `CreateWebAppOptions`, `AssetsBinding` | Static assets Worker options and binding shape. |
 
-Helper for Vite React SPAs with an optional embedded API. See the
-`web-vite` template in `@gmode/cli`.
+## Works with
 
-## Gateway registration
+[`@gmode/gateway`](../gateway) · [`@gmode/service`](../service) · [`@gmode/core`](../core) · [`@gmode/cli`](../cli) · [GMode](https://github.com/charl-kruger/gmode) · [docs](../../docs)
 
-Declare the app in `gmode.jsonc` and run `gmode sync`. The gateway registers
-`gateway.web()` with the correct mount, binding, and dev URL proxy.
+## License
 
-Example: [web-app-tanstack](../../examples/web-app-tanstack/README.md)
+MIT

@@ -1,41 +1,51 @@
 # create-gmode
+npm create entrypoint that scaffolds a GMode Cloudflare Workers app platform through `@gmode/cli`.
 
-Scaffold a [GMode](https://github.com/charl-kruger/gmode) app platform on
-Cloudflare Workers.
+## Install
 
 ```bash
-pnpm create gmode my-app
-# or
 npm create gmode@latest my-app
 ```
 
-## What you get
+Requires Node 22+. This package depends on `@gmode/cli` and forwards directly to `gmode init`.
 
-- `gmode.jsonc` manifest (single source of truth)
-- Gateway Worker with generated `gmode.generated.ts`
-- `GMODE_CONTEXT_SECRET` in `gateway/.dev.vars` for local HMAC signing
-- pnpm workspace with `@gmode/cli` as a dev dependency
-- Templates for adding services and web apps
+## Quick example
 
-## Next steps
+```ts
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { run, type CliEnv } from "@gmode/cli";
 
-```bash
-cd my-app
-pnpm install
-pnpm exec gmode new service users
-pnpm exec gmode new web dashboard --framework tanstack-start
-pnpm dev
+const cli: CliEnv = {
+  cwd: process.cwd(),
+  env: process.env as Record<string, string | undefined>,
+  fetch,
+  stdout: (line) => process.stdout.write(`${line}\n`),
+  stderr: (line) => process.stderr.write(`${line}\n`),
+  exit: process.exit,
+  readFile: (path) => readFile(path, "utf8"),
+  writeFile: (path, contents) => writeFile(path, contents, "utf8"),
+  mkdir: (path) => mkdir(path, { recursive: true }).then(() => {}),
+};
+
+await run(["init", "my-app"], cli);
 ```
 
-| URL | What |
+The binary creates a workspace scaffold with a manifest, gateway Worker, service/web templates, generated binding sync, npm scripts, and the local dev dashboard wiring supplied by `@gmode/cli`.
+
+![GMode dashboard screenshot](https://github.com/charl-kruger/gmode/raw/main/.github/assets/dashboard-light.png)
+
+## API
+
+| Export | Purpose |
 |---|---|
-| http://localhost:8787 | Public gateway |
-| http://localhost:8787/docs | Aggregated Swagger UI |
-| http://localhost:9100 | GMode dev dashboard |
+| `create-gmode` binary | Runs `gmode init <dir>` with `my-gmode-app` as the default directory when no argument is passed. |
+| `@gmode/cli run` | Underlying command dispatcher used by the binary. |
+| `@gmode/cli templates` | Workspace, gateway, service, and web app templates installed by the CLI. |
 
-## How it works
+## Works with
 
-`create-gmode` is a thin wrapper over `gmode init` from `@gmode/cli`. All
-scaffolding, templates, and the sync engine live in one place.
+[`@gmode/cli`](../cli) · [`@gmode/gateway`](../gateway) · [`@gmode/service`](../service) · [`@gmode/web`](../web) · [`@gmode/dashboard`](../dashboard) · [GMode](https://github.com/charl-kruger/gmode) · [docs](../../docs)
 
-See [Workspace CLI](../../docs/workspace-cli.md) for the full command reference.
+## License
+
+MIT

@@ -1,59 +1,73 @@
 # @gmode/cli
-
-The GMode workspace CLI and Cloudflare API Shield tooling.
-
-Binary: **`gmode`**
+Command-line workspace engine for scaffolding, syncing, running, deploying, generating, and Shield-managing GMode apps.
 
 ## Install
 
-In a scaffolded workspace:
-
 ```bash
-pnpm add -D @gmode/cli
-pnpm exec gmode --help
+npm i -D @gmode/cli
 ```
 
-Or scaffold a new app (includes the CLI):
+Requires Node 22+. Installs `@gmode/core` and `@gmode/dashboard`; Cloudflare deploy commands expect Wrangler in the generated workspace.
 
-```bash
-pnpm create gmode my-app
-```
-
-## Workspace Commands
-
-| Command | Description |
-|---|---|
-| `gmode init [dir]` | Create manifest + gateway + pnpm workspace |
-| `gmode new service <name>` | Scaffold a private API Worker |
-| `gmode new web <name>` | Scaffold TanStack Start or Vite React app |
-| `gmode sync` | Manifest → wrangler bindings + `gmode.generated.ts` |
-| `gmode doctor` | Validate manifest, drift, secrets, ports |
-| `gmode dev` | Run gateway, services, web apps, dev dashboard |
-| `gmode deploy` | Deploy services/web first, gateway last |
-| `gmode generate client` | Typed client from OpenAPI URL or file |
-| `gmode generate types` | `wrangler types` for every worker |
-
-Full guide: [docs/workspace-cli.md](../../docs/workspace-cli.md)
-
-## Shield Commands
-
-| Command | Credentials required |
-|---|---|
-| `gmode shield:push-schema` | Yes |
-| `gmode shield:bootstrap` | Yes (reads discovery API) |
-| `gmode shield:diff-discovered` | Yes |
-| `gmode shield:sync-schema-actions` | Yes |
-| `gmode shield:sync-sequences` | Only for live sync; `--dry-run` / `--out` are offline |
-
-Configure via `gmode.config.json` or `CLOUDFLARE_API_TOKEN` +
-`CLOUDFLARE_ZONE_ID`. See [docs/api-shield.md](../../docs/api-shield.md).
-
-## Programmatic API
+## Quick example
 
 ```ts
 import { run, type CliEnv } from "@gmode/cli";
 
-const code = await run(["doctor"], cliEnv);
+const cli: CliEnv = {
+  cwd: process.cwd(),
+  env: process.env as Record<string, string | undefined>,
+  fetch,
+  stdout: console.log,
+  stderr: console.error,
+  exit: process.exit,
+  readFile: (path) => import("node:fs/promises").then((fs) => fs.readFile(path, "utf8")),
+  writeFile: (path, body) => import("node:fs/promises").then((fs) => fs.writeFile(path, body)),
+  mkdir: (path) => import("node:fs/promises").then((fs) => fs.mkdir(path, { recursive: true }).then(() => {})),
+};
+
+const code = await run(["init", "my-app", "--name", "my-app"], cli);
+if (code !== 0) process.exit(code);
 ```
 
-Used by `create-gmode` and the E2E test harness.
+Command reference from `src/run.ts`:
+
+| Command | Purpose |
+|---|---|
+| `init [dir] [--name app]` | Create a GMode workspace manifest and gateway. |
+| `new service <name>` | Scaffold a private API service and register it. |
+| `new web <name>` | Scaffold a TanStack Start or Vite React web app. |
+| `sync` | Sync `gmode.jsonc` into Wrangler bindings and generated code. |
+| `doctor` | Validate manifest, bindings, secrets, and drift. |
+| `dev` | Run gateway, services, web apps, and dashboard. |
+| `deploy` | Deploy services first, gateway last. |
+| `generate client` | Generate a typed TypeScript client from OpenAPI. |
+| `generate types` | Run Wrangler types for every worker and re-sync. |
+| `shield:push-schema` | Upload Shield-compatible OpenAPI to Schema Validation. |
+| `shield:bootstrap` | Prune a Shield schema from discovered traffic. |
+| `shield:diff-discovered` | Diff spec operations against discovered endpoints. |
+| `shield:sync-schema-actions` | Apply per-endpoint schema validation actions. |
+| `shield:sync-sequences` | Sync a `defineSequences()` policy to Cloudflare. |
+
+## API
+
+| Export | Purpose |
+|---|---|
+| `run` | Dispatch CLI argv against a `CliEnv`. |
+| `CliEnv`, `CommandRunner`, `CliConfig` | Injectable CLI environment and command types. |
+| `loadConfig` | Load Shield command config. |
+| `findManifestPath`, `loadManifest`, `MANIFEST_FILENAME` | Locate and read `gmode.jsonc`. |
+| `toBindingName`, `toDevUrlVar`, `toWorkerName` | Manifest naming helpers. |
+| `runSync`, `renderGeneratedModule`, `renderWranglerServices` | Sync engine and generated code renderers. |
+| `scaffoldTemplate`, `templatesDir` | Workspace template utilities. |
+| `parseJsonc`, `stripJsonComments`, `upsertTopLevelProperty`, `appendToTopLevelArray` | JSONC editing helpers. |
+| `generateClientSource` | OpenAPI client code generator. |
+| `createCloudflareClient`, `CloudflareError`, `loadShieldSpec`, `buildDashboardImport` | Cloudflare API, Shield spec, and dashboard helpers. |
+
+## Works with
+
+[`create-gmode`](../create-gmode) · [`@gmode/gateway`](../gateway) · [`@gmode/service`](../service) · [`@gmode/dashboard`](../dashboard) · [`@gmode/client`](../client) · [GMode](https://github.com/charl-kruger/gmode) · [docs](../../docs)
+
+## License
+
+MIT
